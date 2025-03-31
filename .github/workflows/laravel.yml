@@ -35,7 +35,7 @@ jobs:
         with:
           server: "ftp.electroshop24.ir"
           username: "kidsshopapiuser@electroshop24.ir"
-          password: "sanazElyas1234567498"
+          password: "sanazElyas123456789"
           local-dir: "./"
           server-dir: "./"
           exclude: |
