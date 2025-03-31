@@ -1,0 +1,4 @@
+intsall sqlsrv ts extention
+install odbc
+configure management > network > tcp > ip address > end of list dynamic earse tcp port 1433
+restart
