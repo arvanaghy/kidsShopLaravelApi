@@ -5,7 +5,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
 
-    <title>الکتروشاپ 24</title>
+    <title>کیدزشاپ</title>
 
     <style>
         body {
@@ -46,7 +46,7 @@
 
 <body>
     <div class="content">
-        <p>الکتروشاپ 24</p>
+        <p>کیدز شاپ</p>
     </div>
 </body>
 

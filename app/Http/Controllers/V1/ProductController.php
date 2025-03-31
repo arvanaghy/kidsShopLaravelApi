@@ -12,6 +12,8 @@ use App\Models\CustomerModel;
 use Exception;
 use Illuminate\Support\Facades\Response;
 use Intervention\Image\ImageManagerStatic as Image;
+use Carbon\Carbon;
+
 
 
 class ProductController extends Controller
@@ -25,36 +27,36 @@ class ProductController extends Controller
         try {
             $active_company = DB::table('Company')->where('DeviceSelected', 1)->first();
             $this->active_company = optional($active_company)->Code ?? null;
-    
+
             if ($this->active_company) {
                 $active_financial_period = DB::table('DoreMali')
                     ->where('CodeCompany', $this->active_company)
                     ->where('DeviceSelected', 1)
                     ->first();
-    
+
                 $this->financial_period = optional($active_financial_period)->Code ?? null;
             }
         } catch (\Exception $e) {
             Log::error("Error initializing constructor: " . $e->getMessage());
         }
     }
-    
+
 
     protected function CreatePath($data)
     {
         $basePath = public_path("products-image");
-    
+
         // Define subdirectories
         $directories = [
             "$basePath/original/" . floor($data->GCode) . "/" . floor($data->SCode),
             "$basePath/webp/" . floor($data->GCode) . "/" . floor($data->SCode),
         ];
-    
+
         foreach ($directories as $dir) {
             File::makeDirectory($dir, 0755, true, true);
         }
     }
-    
+
 
     protected function CreateImages($data, $picName)
     {
@@ -94,24 +96,31 @@ class ProductController extends Controller
     public function list_products()
     {
         try {
-            $imageCreations = ProductModel::select('Pic', 'ImageCode', 'created_at', 'GCode', 'SCode', 'Code', 'CChangePic', 'PicName')->where('CodeCompany', $this->active_company)->where('CShowInDevice', 1)->orderBy('UCode', 'ASC')->paginate(12);
+            $imageCreations = ProductModel::select('Pic', 'ImageCode', 'created_at', 'GCode', 'SCode', 'Code', 'CChangePic', 'PicName')->where('CodeCompany', $this->active_company)->where('Code', 4760)->where('CShowInDevice', 1)->orderBy('UCode', 'ASC')->paginate(500);
 
             foreach ($imageCreations as $imageCreation) {
                 if ($imageCreation->CChangePic == 1) {
                     $this->removeImages($imageCreation);
                     $this->CreatePath($imageCreation);
 
-                    DB::table('Kala')->Where('Code', $imageCreation->Code)->update(['CChangePic' => 0]);
                     if ($imageCreation->Pic != null) {
-                        $picName = ceil($imageCreation->ImageCode) . "_" .  $imageCreation->created_at->getTimestamp();
+                        if (!empty($imageCreation->created_at)) {
+                            $timestamp = Carbon::parse($imageCreation->created_at)->getTimestamp();
+                        } else {
+                            $timestamp = time();
+                        }
+
+                        $picName = ceil($imageCreation->ImageCode) . "_" .  $timestamp;
+
                         $this->CreateImages($imageCreation,  $picName);
 
-                        DB::table('KalaImage')->Where('Code', $imageCreation->ImageCode)->update(['PicName' => $picName]);
+                        DB::table('KalaImage')->where('Code', $imageCreation->ImageCode)->update(['PicName' => $picName]);
                     }
+                    DB::table('Kala')->where('Code', $imageCreation->Code)->update(['CChangePic' => 0]);
                 }
             }
 
-            $result = ProductModel::select(
+            $result = ProductModel::with('productSizeColor')->select(
                 'CodeCompany',
                 'CanSelect',
                 'GCode',
@@ -142,13 +151,12 @@ class ProductController extends Controller
                 'PicName',
                 'created_at',
 
-            )->where('CodeCompany', $this->active_company)->where('CShowInDevice', 1)->orderBy('UCode', 'ASC')->first();
+            )->where('CodeCompany', $this->active_company)->where('Code', 4760)->where('CShowInDevice', 1)->orderBy('UCode', 'ASC')->paginate(500);
 
 
             return response()->json([
                 'message' => 'با موفقیت انجام پذیرفت',
                 "result" => $result,
-                'created_at_in_epoch' => $result->created_at->getTimestamp()
             ], 200);
         } catch (Exception $e) {
             return response()->json([
@@ -521,10 +529,10 @@ class ProductController extends Controller
             ];
 
             switch ($sortType) {
+
                 case 'UCode':
                     $sortField = 'UCode';
                     break;
-
                 case 'price_asc':
                     $sortField = $userResult ? ($priceFields[$userResult->ForooshType] ?? 'KhordePrice') : 'KhordePrice';
                     $sortOrder = 'ASC';
@@ -562,6 +570,10 @@ class ProductController extends Controller
                         ->where('CShowInDevice', 1)
                         ->orderBy('KMegdar', 'DESC')
                         ->paginate(12);
+                    break;
+                default:
+                    $sortField = 'UCode';
+                    break;
             }
 
             $imageResults = ProductModel::where('CodeCompany', $this->active_company)
@@ -718,12 +730,17 @@ class ProductController extends Controller
                     $this->removeImages($image);
                     $this->CreatePath($image);
 
-                    DB::table('Kala')->Where('Code', $image->Code)->update(['CChangePic' => 0]);
+                    DB::table('Kala')->where('Code', $image->Code)->update(['CChangePic' => 0]);
                     if ($image->Pic != null) {
-                        $picName = ceil($image->ImageCode) . "_" .  $image->created_at->getTimestamp();
+                        if ($image->created_at) {
+                            $timestamp = $image->created_at->getTimestamp();
+                        } else {
+                            $timestamp = time();
+                        }
+                        $picName = ceil($image->ImageCode) . "_" .  $timestamp;
                         $this->CreateImages($image,  $picName);
 
-                        DB::table('KalaImage')->Where('Code', $image->ImageCode)->update(['PicName' => $picName]);
+                        DB::table('KalaImage')->where('Code', $image->ImageCode)->update(['PicName' => $picName]);
                     }
                 }
             }
