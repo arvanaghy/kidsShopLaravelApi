@@ -217,8 +217,6 @@ class SubCategories extends Controller
                 ->where('CShowInDevice', 1)
                 ->join('AV_KalaSizeColorMande_View', 'AV_KalaList_View.Code', '=', 'AV_KalaSizeColorMande_View.CodeKala');
 
-            $query->where('AV_KalaSizeColorMande_View.Mande', '!=', '0');
-
             // Apply sorting
             $sortPrice = $request->query('sort_price', 'asc');
             $query->orderBy('AV_KalaSizeColorMande_View.Mablag', in_array($sortPrice, ['asc', 'desc']) ? $sortPrice : 'asc');
