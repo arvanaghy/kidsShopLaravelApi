@@ -83,14 +83,13 @@ class CategoriesController extends Controller
     }
 
 
-    public function topMenu()
+    public function listCategories(Request $request)
     {
         try {
             $categotyImageCreation = CategoryModel::select('Pic', 'Code', 'CChangePic', 'PicName')
                 ->where('CodeCompany', $this->active_company)
                 ->orderBy('Code', 'DESC')
-                ->limit(16)
-                ->get();
+                ->paginate(24);
 
             foreach ($categotyImageCreation as $categoryImage) {
                 if ($categoryImage->CChangePic == 1) {
@@ -113,8 +112,7 @@ class CategoriesController extends Controller
             $categoriesList = CategoryModel::select('Code', 'Name', 'Comment', 'PicName')
                 ->where('CodeCompany', $this->active_company)
                 ->orderBy('Code', 'DESC')
-                ->limit(16)
-                ->get();
+                ->paginate(24);
 
             return response()->json([
                 'result' => [
