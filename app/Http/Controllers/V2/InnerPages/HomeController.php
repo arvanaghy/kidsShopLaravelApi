@@ -271,7 +271,6 @@ class HomeController extends Controller
         try {
             $imageResults = ProductModel::where('CodeCompany', $this->active_company)
                 ->where('CShowInDevice', 1)
-                ->where('CChangePic', 1)
                 ->select('Pic', 'ImageCode', 'created_at', 'GCode', 'SCode', 'Code', 'PicName')
                 ->orderBy('UCode', 'ASC')
                 ->limit(16)
@@ -340,7 +339,6 @@ class HomeController extends Controller
         try {
             $imageResults = ProductModel::where('CodeCompany', $this->active_company)
                 ->where('CShowInDevice', 1)
-                ->where('CChangePic', 1)
                 ->where('CFestival', 1)
                 ->select('Pic', 'ImageCode', 'created_at', 'GCode', 'SCode', 'Code', 'PicName')
                 ->orderBy('UCode', 'ASC')
@@ -481,6 +479,4 @@ class HomeController extends Controller
             ], 500);
         }
     }
-
-
 }

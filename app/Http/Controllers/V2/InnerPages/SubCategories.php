@@ -208,12 +208,22 @@ class SubCategories extends Controller
     {
         try {
 
-            $imageCreation = ProductModel::where('CodeCompany', $this->active_company)
+            $request = request();
+
+            $query = ProductModel::where('CodeCompany', $this->active_company)
                 ->where('GCode', $categoryCode)
-                ->where('CShowInDevice', 1)
-                ->where('CChangePic', 1)
+                ->where('CShowInDevice', 1);
+
+
+            $sortPrice = $request->query('sort_price', 'asc');
+            $query->orderBy('KhordePrice', in_array($sortPrice, ['asc', 'desc']) ? $sortPrice : 'asc');
+
+            if ($search = $request->query('search')) {
+                $query->where('Name', 'LIKE', "%{$search}%");
+            }
+
+            $imageCreation = $query
                 ->select('Pic', 'ImageCode', 'created_at', 'GCode', 'SCode', 'Code', 'PicName')
-                ->orderBy('KhordePrice', 'ASC')
                 ->paginate(24, ['*'], 'product_page');
 
             foreach ($imageCreation as $image) {
@@ -233,40 +243,37 @@ class SubCategories extends Controller
                 DB::table('Kala')->where('Code', $image->Code)->update(['CChangePic' => 0]);
             }
 
-            return ProductModel::where('CodeCompany', $this->active_company)
-                ->where('GCode', $categoryCode)
-                ->where('CShowInDevice', 1)
-                ->select(
-                    'CodeCompany',
-                    'CanSelect',
-                    'GCode',
-                    'GName',
-                    'SCode',
-                    'SName',
-                    'Comment',
-                    'Code',
-                    'CodeKala',
-                    'Name',
-                    'Model',
-                    'UCode',
-                    'Vahed',
-                    'KMegdar',
-                    'KPrice',
-                    'SPrice',
-                    'KhordePrice',
-                    'OmdePrice',
-                    'HamkarPrice',
-                    'AgsatPrice',
-                    'CheckPrice',
-                    'DForoosh',
-                    'CShowInDevice',
-                    'CFestival',
-                    'GPoint',
-                    'KVahed',
-                    'PicName'
-                )
-                ->orderBy('KhordePrice', 'ASC')
-                ->paginate(24, ['*'], 'product_page');
+            return $query->select(
+                'CodeCompany',
+                'CanSelect',
+                'GCode',
+                'GName',
+                'SCode',
+                'SName',
+                'Comment',
+                'Code',
+                'CodeKala',
+                'Name',
+                'Model',
+                'UCode',
+                'Vahed',
+                'KMegdar',
+                'KPrice',
+                'SPrice',
+                'KhordePrice',
+                'OmdePrice',
+                'HamkarPrice',
+                'AgsatPrice',
+                'CheckPrice',
+                'DForoosh',
+                'CShowInDevice',
+                'CFestival',
+                'GPoint',
+                'KVahed',
+                'PicName'
+            )
+                ->paginate(24, ['*'], 'product_page')
+                ->appends($request->query());
         } catch (Exception $e) {
             return response()->json([
                 'message' => 'خطا: ' . $e->getMessage(),
@@ -278,18 +285,17 @@ class SubCategories extends Controller
     public function index(Request $request, $Code)
     {
         try {
-            // Get separate page numbers from request
             $subcategoryPage = $request->query('subcategory_page', 1);
             $productPage = $request->query('product_page', 1);
 
-            // Fetch paginated data with custom page parameters
             $subcategories = $this->list_subcategories($Code)->appends(['subcategory_page' => $subcategoryPage, 'product_page' => $productPage]);
             $categoryProducts = $this->list_category_products($Code)->appends(['subcategory_page' => $subcategoryPage, 'product_page' => $productPage]);
+
             return response()->json([
                 'result' => [
-                    'subcategories' => $this->list_subcategories($Code),
+                    'subcategories' => $subcategories,
                     'category' => $this->fetchCategoryName($Code),
-                    'categoryProducts' => $this->list_category_products($Code),
+                    'categoryProducts' => $categoryProducts,
                 ],
                 'message' => 'دریافت اطلاعات با موفقیت انجام شد'
             ], 200);

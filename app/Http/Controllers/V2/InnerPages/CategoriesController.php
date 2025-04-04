@@ -108,7 +108,7 @@ class CategoriesController extends Controller
                     DB::table('KalaGroup')->where('Code', $categoryImage->Code)->update($updateData);
                 }
             }
-
+            
 
             $categoriesList = CategoryModel::select('Code', 'Name', 'Comment', 'PicName')
                 ->where('CodeCompany', $this->active_company)
