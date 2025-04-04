@@ -221,6 +221,17 @@ class SubCategories extends Controller
             if ($search = $request->query('search')) {
                 $query->where('Name', 'LIKE', "%{$search}%");
             }
+            if ($size = $request->query('size')) {
+                $sizes = explode(',', $size);
+                $query->join('AV_KalaSizeColorMande_View', 'Kala.Code', '=', 'AV_KalaSizeColorMande_View.CodeKala')
+                    ->whereIn('AV_KalaSizeColorMande_View.SizeNum', $sizes);
+            }
+
+            if ($color = $request->query('color')) {
+                $colors = explode(',', $color);
+                $query->join('AV_KalaSizeColorMande_View', 'Kala.Code', '=', 'AV_KalaSizeColorMande_View.CodeKala')
+                    ->whereIn('AV_KalaSizeColorMande_View.ColorCode', $colors);
+            }
 
             $imageCreation = $query
                 ->select('Pic', 'ImageCode', 'created_at', 'GCode', 'SCode', 'Code', 'PicName')
