@@ -348,7 +348,9 @@ class HomeController extends Controller
                 ->get();
 
             foreach ($imageResults as $image) {
-
+                if ($image->CChangePic == 1) {
+                    $this->removeProductImage($image);
+                }
                 if (!empty($image->Pic)) {
                     $this->CreateProductPath($image);
                     $picName = ceil($image->ImageCode) . "_" . $image->created_at->getTimestamp();
@@ -412,13 +414,13 @@ class HomeController extends Controller
                 ->get();
 
             foreach ($imageResults as $image) {
+                if ($image->CChangePic == 1) {
+                    $this->removeProductImage($image);
+                }
                 if (!empty($image->Pic)) {
                     $this->CreateProductPath($image);
 
-                    // تبدیل created_at به شیء Carbon
                     $createdAt = Carbon::parse($image->created_at);
-
-                    // استفاده از getTimestamp بر روی شیء Carbon
                     $picName = ceil($image->ImageCode) . "_" . $createdAt->getTimestamp();
 
                     $this->CreateProductImages($image, $picName);
