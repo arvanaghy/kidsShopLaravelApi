@@ -111,7 +111,7 @@ class HomeController extends Controller
         File::put($imagePath, $data->Pic);
 
         Image::configure(['driver' => 'gd']);
-        Image::make($imagePath)->encode('webp', 80)->resize(250, 250)->save($webpPath);
+        Image::make($imagePath)->encode('webp', 100)->resize(250, 250)->save($webpPath);
 
         File::delete($imagePath);
     }
