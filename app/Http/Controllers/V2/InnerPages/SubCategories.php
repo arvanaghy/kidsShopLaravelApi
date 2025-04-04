@@ -209,18 +209,20 @@ class SubCategories extends Controller
     {
         try {
             $request = request();
-    
+
             // Base query for products
             $query = ProductModel::with(['productSizeColor'])
                 ->where('CodeCompany', $this->active_company)
                 ->where('GCode', $categoryCode)
                 ->where('CShowInDevice', 1)
                 ->join('AV_KalaSizeColorMande_View', 'AV_KalaList_View.Code', '=', 'AV_KalaSizeColorMande_View.CodeKala');
-    
+
+            $query->where('AV_KalaSizeColorMande_View.Mande', '>', 0);
+
             // Apply sorting
             $sortPrice = $request->query('sort_price', 'asc');
             $query->orderBy('AV_KalaSizeColorMande_View.Mablag', in_array($sortPrice, ['asc', 'desc']) ? $sortPrice : 'asc');
-    
+
             // Apply filters
             if ($search = $request->query('search')) {
                 $query->where('Name', 'LIKE', "%{$search}%");
@@ -233,12 +235,12 @@ class SubCategories extends Controller
                 $colors = explode(',', $color);
                 $query->whereIn('AV_KalaSizeColorMande_View.ColorCode', $colors);
             }
-    
+
             // Clone the query for image creation to avoid affecting the main query
             $imageQuery = clone $query;
             $imageCreation = $imageQuery->select('Pic', 'ImageCode', 'created_at', 'GCode', 'SCode', 'Code', 'PicName')
                 ->paginate(24, ['*'], 'product_page');
-    
+
             // Process images
             foreach ($imageCreation as $image) {
                 if ($image->CChangePic == 1) {
@@ -253,17 +255,16 @@ class SubCategories extends Controller
                 }
                 DB::table('Kala')->where('Code', $image->Code)->update(['CChangePic' => 0]);
             }
-    
+
             // Get the final product result with a fresh paginator
             $productResult = $query->select('*')
                 ->paginate(24, ['*'], 'product_page');
-    
+
             // Append query parameters to pagination links
             $productResult->appends($request->query());
-    
+
             // Return the paginator directly
             return $productResult;
-    
         } catch (Exception $e) {
             return response()->json([
                 'message' => 'خطا: ' . $e->getMessage(),
@@ -277,27 +278,27 @@ class SubCategories extends Controller
         try {
             $subcategoryPage = $request->query('subcategory_page', 1);
             $productPage = $request->query('product_page', 1);
-    
+
             // Fetch subcategories
             $subcategories = $this->list_subcategories($Code);
             if ($subcategories instanceof \Illuminate\Http\JsonResponse) {
                 return $subcategories; // Return error response immediately
             }
             $subcategories->appends(['subcategory_page' => $subcategoryPage, 'product_page' => $productPage]);
-    
+
             // Fetch category products
             $categoryProducts = $this->list_category_products($Code);
             if ($categoryProducts instanceof \Illuminate\Http\JsonResponse) {
                 return $categoryProducts; // Return error response immediately
             }
             $categoryProducts->appends(['subcategory_page' => $subcategoryPage, 'product_page' => $productPage]);
-    
+
             // Fetch category name
             $category = $this->fetchCategoryName($Code);
             if ($category instanceof \Illuminate\Http\JsonResponse) {
                 return $category; // Return error response immediately
             }
-    
+
             return response()->json([
                 'result' => [
                     'subcategories' => $subcategories,
@@ -314,10 +315,11 @@ class SubCategories extends Controller
         }
     }
 
-    public function testIt(){
-        try{
+    public function testIt()
+    {
+        try {
             return DB::table('AV_KalaSizeColorMande_View')->get();
-        }catch(Exception $e){
+        } catch (Exception $e) {
             return response()->json([
                 'status' => false,
                 'message' => $e->getMessage()
