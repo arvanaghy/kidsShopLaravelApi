@@ -210,7 +210,7 @@ class SubCategories extends Controller
 
             $request = request();
 
-            $query = ProductModel::where('CodeCompany', $this->active_company)
+            $query = ProductModel::with(['productSizeColor'])->where('CodeCompany', $this->active_company)
                 ->where('GCode', $categoryCode)
                 ->where('CShowInDevice', 1);
 
