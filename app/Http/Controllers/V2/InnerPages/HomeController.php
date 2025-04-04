@@ -250,7 +250,7 @@ class HomeController extends Controller
         File::delete(public_path($imagePath));
     }
 
-    protected function removeProductImage($data)
+    protected function removeProductImages($data)
     {
         try {
             $dir = "products-image/original/" . ceil($data->GCode) . "/" . ceil($data->SCode);
@@ -279,7 +279,7 @@ class HomeController extends Controller
 
             foreach ($imageResults as $image) {
                 if ($image->CChangePic == 1) {
-                    $this->removeProductImage($image);
+                    $this->removeProductImages($image);
                 }
                 if (!empty($image->Pic)) {
                     $this->CreateProductPath($image);
@@ -349,7 +349,7 @@ class HomeController extends Controller
 
             foreach ($imageResults as $image) {
                 if ($image->CChangePic == 1) {
-                    $this->removeProductImage($image);
+                    $this->removeProductImages($image);
                 }
                 if (!empty($image->Pic)) {
                     $this->CreateProductPath($image);
@@ -415,7 +415,7 @@ class HomeController extends Controller
 
             foreach ($imageResults as $image) {
                 if ($image->CChangePic == 1) {
-                    $this->removeProductImage($image);
+                    $this->removeProductImages($image);
                 }
                 if (!empty($image->Pic)) {
                     $this->CreateProductPath($image);

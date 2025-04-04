@@ -109,6 +109,7 @@ class CategoriesController extends Controller
                 }
             }
 
+
             $categoriesList = CategoryModel::select('Code', 'Name', 'Comment', 'PicName')
                 ->where('CodeCompany', $this->active_company)
                 ->orderBy('Code', 'DESC')

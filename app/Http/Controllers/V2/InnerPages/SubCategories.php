@@ -105,7 +105,7 @@ class SubCategories extends Controller
         }
     }
 
-    protected function CreateProductPath($data)
+    protected function CreateProductImagesPath($data)
     {
         $basePath = public_path("products-image");
         $subPaths = ["original", "webp"];
@@ -133,6 +133,22 @@ class SubCategories extends Controller
         $image->encode('webp', 100)->resize(250, 250)->save(public_path($webpPath), 100);
 
         File::delete(public_path($imagePath));
+    }
+
+    protected function removeProductImages($data)
+    {
+        try {
+            $dir = "products-image/original/" . ceil($data->GCode) . "/" . ceil($data->SCode);
+            $webpDir = "products-image/webp/" . ceil($data->GCode) . "/" . ceil($data->SCode);
+            if (File::exists($dir)) {
+                File::deleteDirectory($dir);
+            }
+            if (File::exists($webpDir)) {
+                File::deleteDirectory($webpDir);
+            }
+        } catch (\Exception $e) {
+            return;
+        }
     }
 
 
@@ -203,8 +219,11 @@ class SubCategories extends Controller
                 ->paginate(12);
 
             foreach ($imageCreation as $image) {
+                if ($image->CChangePic == 1) {
+                    $this->removeProductImages($image);
+                }
                 if (!empty($image->Pic)) {
-                    $this->CreateProductPath($image);
+                    $this->CreateProductImagesPath($image);
                     $picName = ceil($image->ImageCode) . "_" . $image->created_at->getTimestamp();
                     $this->CreateProductImages($image, $picName);
                     DB::table('KalaImage')->where('Code', $image->ImageCode)->update(['PicName' => $picName]);
@@ -255,7 +274,7 @@ class SubCategories extends Controller
         }
     }
 
-    public function index($Code)
+    public function index(Request $request, $Code)
     {
         try {
             return response()->json([
