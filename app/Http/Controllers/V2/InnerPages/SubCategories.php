@@ -196,7 +196,7 @@ class SubCategories extends Controller
     protected function fetchCategoryName($Code)
     {
         try {
-            return CategoryModel::select('Code', 'Name', 'Comment')->where('CodeCompany', $this->active_company)->where('Code', $Code)->first();
+            return CategoryModel::select('Code', 'Name', 'Comment' , 'PicName')->where('CodeCompany', $this->active_company)->where('Code', $Code)->first();
         } catch (Exception $e) {
 
             return response()->json([
