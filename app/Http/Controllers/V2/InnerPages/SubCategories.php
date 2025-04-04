@@ -7,13 +7,11 @@ use App\Models\CategoryModel;
 use Illuminate\Http\Request;
 use App\Models\ProductModel;
 use App\Models\SubCategoryModel;
+use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
-use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Response;
 use Intervention\Image\ImageManagerStatic as Image;
 use Exception;
-use Carbon\Carbon;
 
 
 class SubCategories extends Controller
@@ -209,6 +207,7 @@ class SubCategories extends Controller
     public function list_category_products($categoryCode)
     {
         try {
+
             $imageCreation = ProductModel::where('CodeCompany', $this->active_company)
                 ->where('GCode', $categoryCode)
                 ->where('CShowInDevice', 1)
@@ -222,8 +221,11 @@ class SubCategories extends Controller
                     $this->removeProductImages($image);
                 }
                 if (!empty($image->Pic)) {
-                    $this->CreateProductImagesPath($image);
-                    $picName = ceil($image->ImageCode) . "_" . $image->created_at->getTimestamp();
+                    $this->CreateProductPath($image);
+
+                    $createdAt = Carbon::parse($image->created_at);
+                    $picName = ceil($image->ImageCode) . "_" . $createdAt->getTimestamp();
+
                     $this->CreateProductImages($image, $picName);
                     DB::table('KalaImage')->where('Code', $image->ImageCode)->update(['PicName' => $picName]);
                 }
