@@ -157,7 +157,7 @@ class SubCategories extends Controller
                 ->where('CodeCompany', $this->active_company)
                 ->where('CodeGroup', $Code)
                 ->orderBy('Code', 'DESC')
-                ->paginate(12);
+                ->paginate(12, ['*'], 'subcategory_page');
 
             foreach ($imageCreation as $image) {
                 if ($image->CChangePic == 1) {
@@ -181,7 +181,7 @@ class SubCategories extends Controller
                 ->where('CodeCompany', $this->active_company)
                 ->where('CodeGroup', $Code)
                 ->orderBy('Code', 'DESC')
-                ->paginate(12);
+                ->paginate(12, ['*'], 'subcategory_page');
         } catch (Exception $e) {
             return response()->json([
                 'message' => $e->getMessage(),
@@ -214,7 +214,7 @@ class SubCategories extends Controller
                 ->where('CChangePic', 1)
                 ->select('Pic', 'ImageCode', 'created_at', 'GCode', 'SCode', 'Code', 'PicName')
                 ->orderBy('KhordePrice', 'ASC')
-                ->paginate(24);
+                ->paginate(24, ['*'], 'product_page');
 
             foreach ($imageCreation as $image) {
                 if ($image->CChangePic == 1) {
@@ -266,7 +266,7 @@ class SubCategories extends Controller
                     'PicName'
                 )
                 ->orderBy('KhordePrice', 'ASC')
-                ->paginate(24);
+                ->paginate(24, ['*'], 'product_page');
         } catch (Exception $e) {
             return response()->json([
                 'message' => 'خطا: ' . $e->getMessage(),
@@ -278,6 +278,13 @@ class SubCategories extends Controller
     public function index(Request $request, $Code)
     {
         try {
+            // Get separate page numbers from request
+            $subcategoryPage = $request->query('subcategory_page', 1);
+            $productPage = $request->query('product_page', 1);
+
+            // Fetch paginated data with custom page parameters
+            $subcategories = $this->list_subcategories($Code)->appends(['subcategory_page' => $subcategoryPage, 'product_page' => $productPage]);
+            $categoryProducts = $this->list_category_products($Code)->appends(['subcategory_page' => $subcategoryPage, 'product_page' => $productPage]);
             return response()->json([
                 'result' => [
                     'subcategories' => $this->list_subcategories($Code),
