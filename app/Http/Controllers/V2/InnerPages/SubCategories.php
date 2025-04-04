@@ -243,7 +243,9 @@ class SubCategories extends Controller
                 DB::table('Kala')->where('Code', $image->Code)->update(['CChangePic' => 0]);
             }
 
-            return $query
+            return $query->select(
+                '*',
+            )
                 ->paginate(24, ['*'], 'product_page')
                 ->appends($request->query());
         } catch (Exception $e) {
