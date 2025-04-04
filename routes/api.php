@@ -10,8 +10,11 @@ use App\Http\Controllers\V1\CustomerController;
 use App\Http\Controllers\V1\GreneralController;
 use App\Http\Controllers\V1\WebPaymentController;
 
-use App\Http\Controllers\V2\InnerPages\HomeController;
-use App\Http\Controllers\V2\InnerPages\SubCategories;
+use App\Http\Controllers\V2\InnerPages\HomeController as WebHomeController;
+use App\Http\Controllers\V2\InnerPages\SubCategories as WebSubCategories;
+use App\Http\Controllers\V2\InnerPages\CategoriesController as WebCategoriesController;
+use App\Http\Controllers\V2\InnerPages\GeneralController as WebGeneralController;
+
 
 
 
@@ -86,9 +89,8 @@ Route::prefix('v1')->group(function () {
 
 
 Route::prefix('v2')->group(function () {
-    Route::get('/top-menu', [HomeController::class, 'topMenu']);
-    Route::get('/home-page', [HomeController::class, 'homePage']);
-    Route::get('/list-subcategories/{Code}', [SubCategories::class, 'index']);
-
+    Route::get('/top-menu', [WebGeneralController::class, 'topMenu']);
+    Route::get('/home-page', [WebHomeController::class, 'homePage']);
+    Route::get('/list-categories', [WebCategoriesController::class, 'listCategories']);
+    Route::get('/list-subcategories/{Code}', [WebSubCategories::class, 'index']);
 });
-
