@@ -138,7 +138,6 @@ class HomeController extends Controller
         }
     }
 
-
     protected function list_categories()
     {
         try {
@@ -178,7 +177,6 @@ class HomeController extends Controller
             ], 503);
         }
     }
-
 
     protected function fetchBanners()
     {
