@@ -116,9 +116,9 @@ class HomeController extends Controller
         }
     }
 
-    private function processProductImages(object $data, string $picName): void
+    private function processProductImages(object $data, ?string $picName): void
     {
-        if (!empty($data->Pic)) {
+        if (!empty($data->Pic) && $picName !== null) {
             $path = "products-image";
             $subPath = ceil($data->GCode) . "/" . ceil($data->SCode);
             $this->createDirectories([$path => ["original/$subPath", "webp/$subPath"]]);
@@ -202,20 +202,20 @@ class HomeController extends Controller
                 ->orderBy('UCode', 'ASC')
                 ->limit(self::LIMIT_DEFAULT)
                 ->get();
-
+    
             foreach ($images as $image) {
                 $picName = !empty($image->Pic)
                     ? ceil($image->ImageCode) . "_" . Carbon::parse($image->created_at)->getTimestamp()
                     : null;
-
+    
                 $this->processProductImages($image, $picName);
-
-                if ($picName) {
+    
+                if ($picName !== null) {  // Only update if we have a valid picName
                     DB::table('KalaImage')->where('Code', $image->ImageCode)->update(['PicName' => $picName]);
                 }
                 DB::table('Kala')->where('Code', $image->Code)->update(['CChangePic' => 0]);
             }
-
+    
             return ProductModel::where($conditions)
                 ->select($selectFields)
                 ->orderBy('UCode', 'ASC')
@@ -268,20 +268,20 @@ class HomeController extends Controller
                 ->select(['Pic', 'KCode as Code', 'ImageCode', 'created_at', 'GCode', 'SGCode as SCode', 'PicName'])
                 ->limit(self::LIMIT_DEFAULT)
                 ->get();
-
+    
             foreach ($images as $image) {
                 $picName = !empty($image->Pic)
                     ? ceil($image->ImageCode) . "_" . Carbon::parse($image->created_at)->getTimestamp()
                     : null;
-
+    
                 $this->processProductImages($image, $picName);
-
-                if ($picName) {
+    
+                if ($picName !== null) {  // Only update if we have a valid picName
                     DB::table('KalaImage')->where('Code', $image->ImageCode)->update(['PicName' => $picName]);
                 }
                 DB::table('Kala')->where('Code', $image->Code)->update(['CChangePic' => 0]);
             }
-
+    
             return DB::table('AV_KalaTedadForooshKol_View')
                 ->select([
                     'GCode', 'GName', 'SGCode as SCode', 'SGName as SName', 'KCode as Code',
@@ -296,15 +296,6 @@ class HomeController extends Controller
                 ->get();
         } catch (Exception $e) {
             return $this->errorResponse("Error: " . $e->getMessage(), 503);
-        }
-    }
-
-    protected function faq(): mixed
-    {
-        try {
-            return DB::table('DeviceAbout')->where('Type', 1)->get();
-        } catch (Exception $e) {
-            return $this->errorResponse($e->getMessage(), 503);
         }
     }
 
