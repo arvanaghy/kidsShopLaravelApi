@@ -4,465 +4,311 @@ namespace App\Http\Controllers\V2\InnerPages;
 
 use App\Http\Controllers\Controller;
 use App\Models\CategoryModel;
-use Illuminate\Http\Request;
 use App\Models\ProductModel;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Response;
 use Intervention\Image\ImageManagerStatic as Image;
 use Exception;
 use Carbon\Carbon;
 
-
 class HomeController extends Controller
 {
+    private const IMAGE_QUALITY = 100;
+    private const CATEGORY_IMAGE_SIZE = [250, 250];
+    private const BANNER_SIZES = [
+        'desktop' => [1360, 786],
+        'mobile' => [390, 844]
+    ];
+    private const LIMIT_DEFAULT = 16;
+    private const LIMIT_BANNERS = 6;
 
-    protected $active_company = null;
-    protected $financial_period = null;
-
-
-    protected function CreateCategoryPath()
-    {
-        $paths = [
-            "category-images",
-            "category-images/original",
-            "category-images/webp"
-        ];
-
-        foreach ($paths as $path) {
-            $fullPath = public_path($path);
-            if (!File::isDirectory($fullPath)) {
-                File::makeDirectory($fullPath, 0755, true, true);
-            }
-        }
-    }
-
-    protected function CreateBannerPath()
-    {
-        $paths = [
-            "banner-images",
-            "banner-images/original",
-            "banner-images/webp"
-        ];
-
-        foreach ($paths as $path) {
-            $fullPath = public_path($path);
-            if (!File::isDirectory($fullPath)) {
-                File::makeDirectory($fullPath, 0755, true, true);
-            }
-        }
-    }
+    private ?string $active_company = null;
+    private ?string $financial_period = null;
 
     public function __construct(Request $request)
     {
         try {
-            $this->CreateCategoryPath();
-            $this->CreateBannerPath();
+            $this->createDirectories([
+                'category-images' => ['original', 'webp'],
+                'banner-images' => ['original', 'webp'],
+                'products-image' => ['original', 'webp']
+            ]);
 
             $this->active_company = DB::table('Company')
                 ->where('DeviceSelected', 1)
-                ->pluck('Code')
-                ->first();
+                ->value('Code');
 
             if ($this->active_company) {
                 $this->financial_period = DB::table('DoreMali')
                     ->where('CodeCompany', $this->active_company)
                     ->where('DeviceSelected', 1)
-                    ->pluck('Code')
-                    ->first();
+                    ->value('Code');
             }
         } catch (Exception $e) {
-            return response()->json(['status' => false, 'message' => $e->getMessage()], 500);
+            return $this->errorResponse($e->getMessage(), 500);
         }
     }
 
-    protected function removeCategoryImage($data)
+    private function createDirectories(array $structure): void
     {
-        if (!empty($data->PicName)) {
-            $webpPath = public_path("category-images/webp/" . $data->PicName . ".webp");
-            if (File::exists($webpPath)) {
-                File::delete($webpPath);
-            }
-        }
-    }
-
-    protected function removeBannerImage($data)
-    {
-        if (!empty($data->PicName)) {
-            $webpPathDesktop = public_path("banner-images/webp/" . $data->PicName . "_desktop.webp");
-            $webpPathMobile = public_path("banner-images/webp/" . $data->PicName . "_mobile.webp");
-            if (File::exists($webpPathDesktop)) {
-                File::delete($webpPathDesktop);
-            }
-            if (File::exists($webpPathMobile)) {
-                File::delete($webpPathMobile);
-            }
-        }
-    }
-
-    protected function CreateCategoryImages($data, $picName)
-    {
-        if (empty($data->Pic)) {
-            return;
-        }
-
-        $imagePath = public_path("category-images/original/" . $picName . ".jpg");
-        $webpPath = public_path("category-images/webp/" . $picName . ".webp");
-
-        File::put($imagePath, $data->Pic);
-
-        Image::configure(['driver' => 'gd']);
-        Image::make($imagePath)->encode('webp', 80)->resize(250, 250)->save($webpPath);
-
-        File::delete($imagePath);
-    }
-
-    protected function CreateBannerImages($data, $picName)
-    {
-        $sizes = [
-            'desktop' => [1360, 786],
-            'mobile' => [390, 844]
-        ];
-
-        foreach ($sizes as $type => $size) {
-            $imagePath = public_path("banner-images/original/{$picName}_{$type}.jpg");
-            $webpPath = public_path("banner-images/webp/{$picName}_{$type}.webp");
-
-            File::put($imagePath, $data->Pic);
-            Image::configure(['driver' => 'gd']);
-            Image::make($imagePath)
-                ->encode('webp', 100)
-                ->resize($size[0], $size[1])
-                ->save($webpPath, 100);
-
-            File::delete($imagePath);
-        }
-    }
-
-
-    protected function list_categories()
-    {
-        try {
-            $imageCreation = CategoryModel::select('Pic', 'Code', 'CChangePic', 'PicName')
-                ->where('CodeCompany', $this->active_company)
-                ->orderBy('Code', 'DESC')
-                ->limit(16)
-                ->get();
-
-            foreach ($imageCreation as $image) {
-                if ($image->CChangePic == 1) {
-                    if (!empty($image->PicName)) {
-                        $this->removeCategoryImage($image);
-                    }
-
-                    if (!empty($image->Pic)) {
-                        $picName = ceil($image->Code) . "_" . rand(10000, 99999);
-                        $this->CreateCategoryImages($image, $picName);
-                        $updateData = ['CChangePic' => 0, 'PicName' => $picName];
-                    } else {
-                        $updateData = ['CChangePic' => 0, 'PicName' => null];
-                    }
-
-                    DB::table('KalaGroup')->where('Code', $image->Code)->update($updateData);
+        foreach ($structure as $base => $subdirs) {
+            foreach ($subdirs as $subdir) {
+                $path = public_path("$base/$subdir");
+                if (!File::isDirectory($path)) {
+                    File::makeDirectory($path, 0755, true);
                 }
             }
-
-            return CategoryModel::select('Code', 'Name', 'Comment', 'PicName')
-                ->where('CodeCompany', $this->active_company)
-                ->orderBy('Code', 'DESC')
-                ->limit(16)
-                ->get();
-        } catch (Exception $e) {
-            return response()->json([
-                'message' => $e->getMessage(),
-                'result' => null
-            ], 503);
         }
     }
 
+    private function removeImage(string $path, string $filename, array $suffixes = ['.webp']): void
+    {
+        foreach ($suffixes as $suffix) {
+            $fullPath = public_path("$path/{$filename}{$suffix}");
+            if (File::exists($fullPath)) {
+                File::delete($fullPath);
+            }
+        }
+    }
 
-    protected function fetchBanners()
+    private function processImage(string $sourcePath, string $destPath, string $filename, array $size, string $sourceData): void
+    {
+        $originalPath = public_path("$sourcePath/$filename.jpg");
+        $webpPath = public_path("$destPath/$filename.webp");
+
+        File::put($originalPath, $sourceData);
+        Image::configure(['driver' => 'gd']);
+        Image::make($originalPath)
+            ->encode('webp', self::IMAGE_QUALITY)
+            ->resize(...$size)
+            ->save($webpPath, self::IMAGE_QUALITY);
+
+        File::delete($originalPath);
+    }
+
+    private function processCategoryImages(object $data, string $picName): void
+    {
+        if (!empty($data->Pic)) {
+            $this->processImage(
+                'category-images/original',
+                'category-images/webp',
+                $picName,
+                self::CATEGORY_IMAGE_SIZE,
+                $data->Pic
+            );
+        }
+    }
+
+    private function processBannerImages(object $data, string $picName): void
+    {
+        if (!empty($data->Pic)) {
+            foreach (self::BANNER_SIZES as $type => $size) {
+                $this->processImage(
+                    'banner-images/original',
+                    'banner-images/webp',
+                    "{$picName}_{$type}",
+                    $size,
+                    $data->Pic
+                );
+            }
+        }
+    }
+
+    private function processProductImages(object $data, string $picName): void
+    {
+        if (!empty($data->Pic)) {
+            $path = "products-image";
+            $subPath = ceil($data->GCode) . "/" . ceil($data->SCode);
+            $this->createDirectories([$path => ["original/$subPath", "webp/$subPath"]]);
+            $this->processImage(
+                "$path/original/$subPath",
+                "$path/webp/$subPath",
+                $picName,
+                self::CATEGORY_IMAGE_SIZE,
+                $data->Pic
+            );
+        }
+    }
+
+    private function errorResponse(string $message, int $status): \Illuminate\Http\JsonResponse
+    {
+        return response()->json(['status' => false, 'message' => $message], $status);
+    }
+
+    private function updateImages(string $table, string $imagePath, array $queryConditions, callable $imageProcessor): mixed
     {
         try {
-            $imageResult = DB::table('DeviceHeaderImage')
+            $images = DB::table($table)
+                ->where($queryConditions)
+                ->where('CChangePic', 1)
                 ->select('Pic', 'Code', 'CChangePic', 'PicName')
-                ->where('CodeCompany', $this->active_company)
-                ->limit(6)
+                ->limit(self::LIMIT_DEFAULT)
                 ->get();
 
-            foreach ($imageResult as $image) {
-                if ($image->CChangePic == 1) {
-                    if (!empty($image->PicName)) {
-                        $this->removeBannerImage($image);
-                    }
-
-                    if (!empty($image->Pic)) {
-                        $picName = ceil($image->Code) . "_" . rand(10000, 99999);
-                        $this->CreateBannerImages($image, $picName);
-                        $updateData = ['CChangePic' => 0, 'PicName' => $picName];
-                    } else {
-                        $updateData = ['CChangePic' => 0, 'PicName' => null];
-                    }
-
-                    DB::table('DeviceHeaderImage')->where('Code', $image->Code)->update($updateData);
+            foreach ($images as $image) {
+                if (!empty($image->PicName)) {
+                    $this->removeImage($imagePath, $image->PicName);
                 }
+
+                $picName = !empty($image->Pic) 
+                    ? ceil($image->Code) . "_" . rand(10000, 99999)
+                    : null;
+
+                $imageProcessor($image, $picName);
+                
+                DB::table($table)
+                    ->where('Code', $image->Code)
+                    ->update(['CChangePic' => 0, 'PicName' => $picName]);
             }
 
-            return DB::table('DeviceHeaderImage')
-                ->select('Comment', 'PicName', 'Code')
-                ->where('CodeCompany', $this->active_company)
-                ->whereNotNull('Pic')
+            return DB::table($table)
+                ->where($queryConditions)
                 ->orderBy('Code', 'DESC')
-                ->limit(6)
+                ->limit(self::LIMIT_DEFAULT)
                 ->get();
         } catch (Exception $e) {
-            return response()->json([
-                'result' => null,
-                'message' => $e->getMessage(),
-            ], 503);
+            return $this->errorResponse($e->getMessage(), 503);
         }
     }
 
-    // protected function removeProductImages($data)
-    // {
-    //     // $path = "products-image/webp/" . floor($data->GCode) . "/" . floor($data->SCode);
-    //     // File::deleteDirectory(public_path($path));
-    // }
-
-    protected function CreateProductPath($data)
+    protected function list_categories(): mixed
     {
-        $basePath = public_path("products-image");
-        $subPaths = ["original", "webp"];
-
-        array_map(function ($type) use ($basePath, $data) {
-            $dir = "$basePath/$type/" . ceil($data->GCode) . "/" . ceil($data->SCode);
-            if (!File::exists($dir)) {
-                File::makeDirectory($dir, 0755, true, true);
-            }
-        }, $subPaths);
+        return $this->updateImages(
+            'KalaGroup',
+            'category-images/webp',
+            ['CodeCompany' => $this->active_company],
+            fn($image, $picName) => $this->processCategoryImages($image, $picName)
+        );
     }
 
-    protected function CreateProductImages($data, $picName)
+    protected function fetchBanners(): mixed
     {
-        $dir = "products-image/original/" . ceil($data->GCode) . "/" . ceil($data->SCode);
-        $webpDir = "products-image/webp/" . ceil($data->GCode) . "/" . ceil($data->SCode);
-
-        $imagePath = "$dir/$picName.jpg";
-        $webpPath = "$webpDir/$picName.webp";
-
-        File::put(public_path($imagePath), $data->Pic);
-        Image::configure(['driver' => 'gd']);
-
-        $image = Image::make(public_path($imagePath));
-        $image->encode('webp', 100)->resize(250, 250)->save(public_path($webpPath), 100);
-
-        File::delete(public_path($imagePath));
+        return $this->updateImages(
+            'DeviceHeaderImage',
+            'banner-images/webp',
+            ['CodeCompany' => $this->active_company],
+            fn($image, $picName) => $this->processBannerImages($image, $picName)
+        );
     }
 
-    protected function fetchNewestProducts()
+    private function processProductUpdates(string $table, array $conditions, array $selectFields): mixed
     {
         try {
-            $imageResults = ProductModel::where('CodeCompany', $this->active_company)
-                ->where('CShowInDevice', 1)
+            $images = ProductModel::where($conditions)
                 ->where('CChangePic', 1)
-                ->select('Pic', 'ImageCode', 'created_at', 'GCode', 'SCode', 'Code', 'PicName')
+                ->select(['Pic', 'ImageCode', 'created_at', 'GCode', 'SCode', 'Code', 'PicName'])
                 ->orderBy('UCode', 'ASC')
-                ->limit(16)
+                ->limit(self::LIMIT_DEFAULT)
                 ->get();
 
-            foreach ($imageResults as $image) {
+            foreach ($images as $image) {
+                $picName = !empty($image->Pic)
+                    ? ceil($image->ImageCode) . "_" . Carbon::parse($image->created_at)->getTimestamp()
+                    : null;
 
-                if (!empty($image->Pic)) {
-                    $this->CreateProductPath($image);
-                    $picName = ceil($image->ImageCode) . "_" . $image->created_at->getTimestamp();
-                    $this->CreateProductImages($image, $picName);
+                $this->processProductImages($image, $picName);
+
+                if ($picName) {
                     DB::table('KalaImage')->where('Code', $image->ImageCode)->update(['PicName' => $picName]);
                 }
-
                 DB::table('Kala')->where('Code', $image->Code)->update(['CChangePic' => 0]);
             }
 
-            return ProductModel::where('CodeCompany', $this->active_company)
-                ->where('CShowInDevice', 1)
-                ->select(
-                    'CodeCompany',
-                    'CanSelect',
-                    'GCode',
-                    'GName',
-                    'Comment',
-                    'SCode',
-                    'SName',
-                    'Code',
-                    'CodeKala',
-                    'Name',
-                    'Model',
-                    'UCode',
-                    'Vahed',
-                    'KMegdar',
-                    'KPrice',
-                    'SPrice',
-                    'KhordePrice',
-                    'OmdePrice',
-                    'HamkarPrice',
-                    'AgsatPrice',
-                    'CheckPrice',
-                    'DForoosh',
-                    'CShowInDevice',
-                    'CFestival',
-                    'GPoint',
-                    'KVahed',
-                    'PicName'
-                )
+            return ProductModel::where($conditions)
+                ->select($selectFields)
                 ->orderBy('UCode', 'ASC')
-                ->limit(16)
+                ->limit(self::LIMIT_DEFAULT)
                 ->get();
         } catch (Exception $e) {
-            return response()->json([
-                'message' => 'Error: ' . $e->getMessage(),
-                'result'  => null,
-            ], 503);
+            return $this->errorResponse("Error: " . $e->getMessage(), 503);
         }
     }
 
-
-    protected function offerd_products()
+    protected function fetchNewestProducts(): mixed
     {
-
-        try {
-            $imageResults = ProductModel::where('CodeCompany', $this->active_company)
-                ->where('CShowInDevice', 1)
-                ->where('CChangePic', 1)
-                ->where('CFestival', 1)
-                ->select('Pic', 'ImageCode', 'created_at', 'GCode', 'SCode', 'Code', 'PicName')
-                ->orderBy('UCode', 'ASC')
-                ->limit(16)
-                ->get();
-
-            foreach ($imageResults as $image) {
-
-                if (!empty($image->Pic)) {
-                    $this->CreateProductPath($image);
-                    $picName = ceil($image->ImageCode) . "_" . $image->created_at->getTimestamp();
-                    $this->CreateProductImages($image, $picName);
-                    DB::table('KalaImage')->where('Code', $image->ImageCode)->update(['PicName' => $picName]);
-                }
-
-                DB::table('Kala')->where('Code', $image->Code)->update(['CChangePic' => 0]);
-            }
-
-            return ProductModel::where('CodeCompany', $this->active_company)
-                ->where('CShowInDevice', 1)
-                ->select(
-                    'CodeCompany',
-                    'CanSelect',
-                    'GCode',
-                    'GName',
-                    'Comment',
-                    'SCode',
-                    'SName',
-                    'Code',
-                    'CodeKala',
-                    'Name',
-                    'Model',
-                    'UCode',
-                    'Vahed',
-                    'KMegdar',
-                    'KPrice',
-                    'SPrice',
-                    'KhordePrice',
-                    'OmdePrice',
-                    'HamkarPrice',
-                    'AgsatPrice',
-                    'CheckPrice',
-                    'DForoosh',
-                    'CShowInDevice',
-                    'CFestival',
-                    'GPoint',
-                    'KVahed',
-                    'PicName'
-                )
-                ->where('CFestival', 1)
-                ->orderBy('UCode', 'ASC')
-                ->limit(16)
-                ->get();
-        } catch (Exception $e) {
-            return response()->json([
-                'message' => 'Error: ' . $e->getMessage(),
-                'result'  => null,
-            ], 503);
-        }
+        $fields = [
+            'CodeCompany', 'CanSelect', 'GCode', 'GName', 'Comment', 'SCode', 'SName',
+            'Code', 'CodeKala', 'Name', 'Model', 'UCode', 'Vahed', 'KMegdar', 'KPrice',
+            'SPrice', 'KhordePrice', 'OmdePrice', 'HamkarPrice', 'AgsatPrice', 'CheckPrice',
+            'DForoosh', 'CShowInDevice', 'CFestival', 'GPoint', 'KVahed', 'PicName'
+        ];
+        
+        return $this->processProductUpdates(
+            'Kala',
+            ['CodeCompany' => $this->active_company, 'CShowInDevice' => 1],
+            $fields
+        );
     }
 
-    protected function bestSeller()
+    protected function offerd_products(): mixed
+    {
+        $fields = [
+            'CodeCompany', 'CanSelect', 'GCode', 'GName', 'Comment', 'SCode', 'SName',
+            'Code', 'CodeKala', 'Name', 'Model', 'UCode', 'Vahed', 'KMegdar', 'KPrice',
+            'SPrice', 'KhordePrice', 'OmdePrice', 'HamkarPrice', 'AgsatPrice', 'CheckPrice',
+            'DForoosh', 'CShowInDevice', 'CFestival', 'GPoint', 'KVahed', 'PicName'
+        ];
+        
+        return $this->processProductUpdates(
+            'Kala',
+            ['CodeCompany' => $this->active_company, 'CShowInDevice' => 1, 'CFestival' => 1],
+            $fields
+        );
+    }
+
+    protected function bestSeller(): mixed
     {
         try {
-            $imageResults = DB::table('AV_KalaTedadForooshKol_View')->select('Pic', 'KCode as Code', 'ImageCode', 'created_at', 'CChangePic', 'GCode', 'SGCode as SCode', 'PicName')
+            $images = DB::table('AV_KalaTedadForooshKol_View')
                 ->where('CShowInDevice', 1)
                 ->where('CodeCompany', $this->active_company)
-                ->limit(16)
+                ->where('CChangePic', 1)
+                ->select(['Pic', 'KCode as Code', 'ImageCode', 'created_at', 'GCode', 'SGCode as SCode', 'PicName'])
+                ->limit(self::LIMIT_DEFAULT)
                 ->get();
 
-            foreach ($imageResults as $image) {
-                if (!empty($image->Pic)) {
-                    $this->CreateProductPath($image);
+            foreach ($images as $image) {
+                $picName = !empty($image->Pic)
+                    ? ceil($image->ImageCode) . "_" . Carbon::parse($image->created_at)->getTimestamp()
+                    : null;
 
-                    // تبدیل created_at به شیء Carbon
-                    $createdAt = Carbon::parse($image->created_at);
+                $this->processProductImages($image, $picName);
 
-                    // استفاده از getTimestamp بر روی شیء Carbon
-                    $picName = ceil($image->ImageCode) . "_" . $createdAt->getTimestamp();
-
-                    $this->CreateProductImages($image, $picName);
+                if ($picName) {
                     DB::table('KalaImage')->where('Code', $image->ImageCode)->update(['PicName' => $picName]);
                 }
-
                 DB::table('Kala')->where('Code', $image->Code)->update(['CChangePic' => 0]);
             }
 
-            return  DB::table('AV_KalaTedadForooshKol_View')->select(
-                'GCode',
-                'GName',
-                'SGCode as SCode',
-                'SGName as SName',
-                'KCode as Code',
-                'KName as Name',
-                'Vahed',
-                'Comment',
-                'KMegdar',
-                'SPrice',
-                'KhordePrice',
-                'OmdePrice',
-                'HamkarPrice',
-                'AgsatPrice',
-                'CheckPrice',
-                'DForoosh',
-                'CShowInDevice',
-                'GPoint',
-                'KVahed',
-                'PicName'
-            )->where('CodeCompany', $this->active_company)->where('CShowInDevice', 1)->orderBy('KMegdar', 'DESC')->limit(16)->get();
+            return DB::table('AV_KalaTedadForooshKol_View')
+                ->select([
+                    'GCode', 'GName', 'SGCode as SCode', 'SGName as SName', 'KCode as Code',
+                    'KName as Name', 'Vahed', 'Comment', 'KMegdar', 'SPrice', 'KhordePrice',
+                    'OmdePrice', 'HamkarPrice', 'AgsatPrice', 'CheckPrice', 'DForoosh',
+                    'CShowInDevice', 'GPoint', 'KVahed', 'PicName'
+                ])
+                ->where('CodeCompany', $this->active_company)
+                ->where('CShowInDevice', 1)
+                ->orderBy('KMegdar', 'DESC')
+                ->limit(self::LIMIT_DEFAULT)
+                ->get();
         } catch (Exception $e) {
-            return response()->json([
-                'message' => 'Error: ' . $e->getMessage(),
-                'result'  => null,
-            ], 503);
+            return $this->errorResponse("Error: " . $e->getMessage(), 503);
         }
     }
 
-    protected function faq()
+    protected function faq(): mixed
     {
         try {
             return DB::table('DeviceAbout')->where('Type', 1)->get();
         } catch (Exception $e) {
-            return response()->json([
-                'result' => null,
-                'message' => $e->getMessage(),
-            ], 503);
+            return $this->errorResponse($e->getMessage(), 503);
         }
     }
 
-    public function index()
+    public function index(): \Illuminate\Http\JsonResponse
     {
         try {
             return response()->json([
@@ -472,16 +318,11 @@ class HomeController extends Controller
                     'newestProducts' => $this->fetchNewestProducts(),
                     'offeredProducts' => $this->offerd_products(),
                     'bestSeller' => $this->bestSeller(),
-                    'Faq' => $this->faq(),
-
                 ],
                 'message' => 'دریافت اطلاعات با موفقیت انجام شد'
             ], 200);
         } catch (Exception $e) {
-            return response()->json([
-                'status' => false,
-                'message' => $e->getMessage()
-            ], 500);
+            return $this->errorResponse($e->getMessage(), 500);
         }
     }
 }
