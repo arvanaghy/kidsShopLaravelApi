@@ -313,4 +313,15 @@ class SubCategories extends Controller
             ], 500);
         }
     }
+
+    public function testIt(){
+        try{
+            return DB::table('AV_KalaSizeColorMande_View')->get();
+        }catch(Exception $e){
+            return response()->json([
+                'status' => false,
+                'message' => $e->getMessage()
+            ], 500);
+        }
+    }
 }

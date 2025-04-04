@@ -93,4 +93,5 @@ Route::prefix('v2')->group(function () {
     Route::get('/home-page', [WebHomeController::class, 'homePage']);
     Route::get('/list-categories', [WebCategoriesController::class, 'listCategories']);
     Route::get('/list-subcategories/{Code}', [WebSubCategories::class, 'index']);
+    Route::get('/test', [WebSubCategories::class, 'testIt']);
 });
