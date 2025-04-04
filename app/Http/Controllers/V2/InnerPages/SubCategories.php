@@ -215,7 +215,7 @@ class SubCategories extends Controller
                 ->where('CodeCompany', $this->active_company)
                 ->where('GCode', $categoryCode)
                 ->where('CShowInDevice', 1)
-                ->join('AV_KalaSizeColorMande_View', 4960, '=', 'AV_KalaSizeColorMande_View.CodeKala');
+                ->join('AV_KalaSizeColorMande_View', 'AV_KalaList_View.Code', '=', 'AV_KalaSizeColorMande_View.CodeKala');
     
             // Apply sorting
             $sortPrice = $request->query('sort_price', 'asc');
