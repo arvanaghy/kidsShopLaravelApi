@@ -222,12 +222,6 @@ class HomeController extends Controller
         }
     }
 
-    // protected function removeProductImages($data)
-    // {
-    //     // $path = "products-image/webp/" . floor($data->GCode) . "/" . floor($data->SCode);
-    //     // File::deleteDirectory(public_path($path));
-    // }
-
     protected function CreateProductPath($data)
     {
         $basePath = public_path("products-image");
@@ -448,18 +442,6 @@ class HomeController extends Controller
         }
     }
 
-    protected function faq()
-    {
-        try {
-            return DB::table('DeviceAbout')->where('Type', 1)->get();
-        } catch (Exception $e) {
-            return response()->json([
-                'result' => null,
-                'message' => $e->getMessage(),
-            ], 503);
-        }
-    }
-
     public function index()
     {
         try {
@@ -470,7 +452,6 @@ class HomeController extends Controller
                     'newestProducts' => $this->fetchNewestProducts(),
                     'offeredProducts' => $this->offerd_products(),
                     'bestSeller' => $this->bestSeller(),
-                    'Faq' => $this->faq(),
 
                 ],
                 'message' => 'دریافت اطلاعات با موفقیت انجام شد'
