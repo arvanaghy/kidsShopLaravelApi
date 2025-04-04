@@ -277,14 +277,31 @@ class SubCategories extends Controller
         try {
             $subcategoryPage = $request->query('subcategory_page', 1);
             $productPage = $request->query('product_page', 1);
-
-            $subcategories = $this->list_subcategories($Code)->appends(['subcategory_page' => $subcategoryPage, 'product_page' => $productPage]);
-            $categoryProducts = $this->list_category_products($Code)->appends(['subcategory_page' => $subcategoryPage, 'product_page' => $productPage]);
-
+    
+            // Fetch subcategories
+            $subcategories = $this->list_subcategories($Code);
+            if ($subcategories instanceof \Illuminate\Http\JsonResponse) {
+                return $subcategories; // Return error response immediately
+            }
+            $subcategories->appends(['subcategory_page' => $subcategoryPage, 'product_page' => $productPage]);
+    
+            // Fetch category products
+            $categoryProducts = $this->list_category_products($Code);
+            if ($categoryProducts instanceof \Illuminate\Http\JsonResponse) {
+                return $categoryProducts; // Return error response immediately
+            }
+            $categoryProducts->appends(['subcategory_page' => $subcategoryPage, 'product_page' => $productPage]);
+    
+            // Fetch category name
+            $category = $this->fetchCategoryName($Code);
+            if ($category instanceof \Illuminate\Http\JsonResponse) {
+                return $category; // Return error response immediately
+            }
+    
             return response()->json([
                 'result' => [
                     'subcategories' => $subcategories,
-                    'category' => $this->fetchCategoryName($Code),
+                    'category' => $category,
                     'categoryProducts' => $categoryProducts,
                 ],
                 'message' => 'دریافت اطلاعات با موفقیت انجام شد'
