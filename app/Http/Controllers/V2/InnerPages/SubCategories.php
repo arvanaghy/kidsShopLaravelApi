@@ -209,16 +209,19 @@ class SubCategories extends Controller
     {
         try {
             $request = request();
-
+    
+            // Base query for products
             $query = ProductModel::with(['productSizeColor'])
                 ->where('CodeCompany', $this->active_company)
                 ->where('GCode', $categoryCode)
-                ->where('CShowInDevice', 1)->join('AV_KalaSizeColorMande_View', 'Kala.Code', '=', 'AV_KalaSizeColorMande_View.CodeKala');
-
-
+                ->where('CShowInDevice', 1)
+                ->join('AV_KalaSizeColorMande_View', 'Kala.Code', '=', 'AV_KalaSizeColorMande_View.CodeKala');
+    
+            // Apply sorting
             $sortPrice = $request->query('sort_price', 'asc');
             $query->orderBy('AV_KalaSizeColorMande_View.Mablag', in_array($sortPrice, ['asc', 'desc']) ? $sortPrice : 'asc');
-
+    
+            // Apply filters
             if ($search = $request->query('search')) {
                 $query->where('Name', 'LIKE', "%{$search}%");
             }
@@ -230,36 +233,37 @@ class SubCategories extends Controller
                 $colors = explode(',', $color);
                 $query->whereIn('AV_KalaSizeColorMande_View.ColorCode', $colors);
             }
-
-            // Handle image creation separately
-            $imageCreation = $query->select('Pic', 'ImageCode', 'created_at', 'GCode', 'SCode', 'Code', 'PicName')
+    
+            // Clone the query for image creation to avoid affecting the main query
+            $imageQuery = clone $query;
+            $imageCreation = $imageQuery->select('Pic', 'ImageCode', 'created_at', 'GCode', 'SCode', 'Code', 'PicName')
                 ->paginate(24, ['*'], 'product_page');
-
+    
+            // Process images
             foreach ($imageCreation as $image) {
                 if ($image->CChangePic == 1) {
                     $this->removeProductImages($image);
                 }
                 if (!empty($image->Pic)) {
                     $this->CreateProductPath($image);
-
                     $createdAt = Carbon::parse($image->created_at);
                     $picName = ceil($image->ImageCode) . "_" . $createdAt->getTimestamp();
-
                     $this->CreateProductImages($image, $picName);
                     DB::table('KalaImage')->where('Code', $image->ImageCode)->update(['PicName' => $picName]);
                 }
                 DB::table('Kala')->where('Code', $image->Code)->update(['CChangePic' => 0]);
             }
-
-            // Get the final product result
+    
+            // Get the final product result with a fresh paginator
             $productResult = $query->select('*')
                 ->paginate(24, ['*'], 'product_page');
-
+    
             // Append query parameters to pagination links
             $productResult->appends($request->query());
-
-            // Return the paginated result directly
+    
+            // Return the paginator directly
             return $productResult;
+    
         } catch (Exception $e) {
             return response()->json([
                 'message' => 'خطا: ' . $e->getMessage(),
