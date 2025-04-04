@@ -250,6 +250,22 @@ class HomeController extends Controller
         File::delete(public_path($imagePath));
     }
 
+    protected function removeProductImage($data)
+    {
+        try {
+            $dir = "products-image/original/" . ceil($data->GCode) . "/" . ceil($data->SCode);
+            $webpDir = "products-image/webp/" . ceil($data->GCode) . "/" . ceil($data->SCode);
+            if (File::exists($dir)) {
+                File::deleteDirectory($dir);
+            }
+            if (File::exists($webpDir)) {
+                File::deleteDirectory($webpDir);
+            }
+        } catch (\Exception $e) {
+            return;
+        }
+    }
+
     protected function fetchNewestProducts()
     {
         try {
@@ -262,7 +278,9 @@ class HomeController extends Controller
                 ->get();
 
             foreach ($imageResults as $image) {
-
+                if ($image->CChangePic == 1) {
+                    $this->removeProductImage($image);
+                }
                 if (!empty($image->Pic)) {
                     $this->CreateProductPath($image);
                     $picName = ceil($image->ImageCode) . "_" . $image->created_at->getTimestamp();
