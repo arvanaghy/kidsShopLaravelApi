@@ -216,7 +216,7 @@ class SubCategories extends Controller
                 ->where('CChangePic', 1)
                 ->select('Pic', 'ImageCode', 'created_at', 'GCode', 'SCode', 'Code', 'PicName')
                 ->orderBy('KhordePrice', 'ASC')
-                ->paginate(12);
+                ->paginate(24);
 
             foreach ($imageCreation as $image) {
                 if ($image->CChangePic == 1) {
@@ -265,7 +265,7 @@ class SubCategories extends Controller
                     'PicName'
                 )
                 ->orderBy('KhordePrice', 'ASC')
-                ->paginate(12);
+                ->paginate(24);
         } catch (Exception $e) {
             return response()->json([
                 'message' => 'خطا: ' . $e->getMessage(),
