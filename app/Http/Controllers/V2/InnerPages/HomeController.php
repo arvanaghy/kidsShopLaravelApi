@@ -460,7 +460,7 @@ class HomeController extends Controller
         }
     }
 
-    public function index()
+    public function homePage()
     {
         try {
             return response()->json([
@@ -471,6 +471,53 @@ class HomeController extends Controller
                     'offeredProducts' => $this->offerd_products(),
                     'bestSeller' => $this->bestSeller(),
 
+                ],
+                'message' => 'دریافت اطلاعات با موفقیت انجام شد'
+            ], 200);
+        } catch (Exception $e) {
+            return response()->json([
+                'status' => false,
+                'message' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function topMenu()
+    {
+        try {
+            $categotyImageCreation = CategoryModel::select('Pic', 'Code', 'CChangePic', 'PicName')
+                ->where('CodeCompany', $this->active_company)
+                ->orderBy('Code', 'DESC')
+                ->limit(16)
+                ->get();
+
+            foreach ($categotyImageCreation as $categoryImage) {
+                if ($categoryImage->CChangePic == 1) {
+                    if (!empty($categoryImage->PicName)) {
+                        $this->removeCategoryImage($categoryImage);
+                    }
+
+                    if (!empty($categoryImage->Pic)) {
+                        $picName = ceil($categoryImage->Code) . "_" . rand(10000, 99999);
+                        $this->CreateCategoryImages($categoryImage, $picName);
+                        $updateData = ['CChangePic' => 0, 'PicName' => $picName];
+                    } else {
+                        $updateData = ['CChangePic' => 0, 'PicName' => null];
+                    }
+
+                    DB::table('KalaGroup')->where('Code', $categoryImage->Code)->update($updateData);
+                }
+            }
+
+            $categoriesList = CategoryModel::select('Code', 'Name', 'Comment', 'PicName')
+                ->where('CodeCompany', $this->active_company)
+                ->orderBy('Code', 'DESC')
+                ->limit(16)
+                ->get();
+
+            return response()->json([
+                'result' => [
+                    'categories' => $categoriesList
                 ],
                 'message' => 'دریافت اطلاعات با موفقیت انجام شد'
             ], 200);

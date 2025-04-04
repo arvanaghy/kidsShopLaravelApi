@@ -86,7 +86,8 @@ Route::prefix('v1')->group(function () {
 
 
 Route::prefix('v2')->group(function () {
-    Route::get('/home-page', [HomeController::class, 'index']);
+    Route::get('/top-menu', [HomeController::class, 'topMenu']);
+    Route::get('/home-page', [HomeController::class, 'homePage']);
     Route::get('/list-subcategories/{Code}', [SubCategories::class, 'index']);
 
 });
