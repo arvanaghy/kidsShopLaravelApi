@@ -243,35 +243,7 @@ class SubCategories extends Controller
                 DB::table('Kala')->where('Code', $image->Code)->update(['CChangePic' => 0]);
             }
 
-            return $query->select(
-                'CodeCompany',
-                'CanSelect',
-                'GCode',
-                'GName',
-                'SCode',
-                'SName',
-                'Comment',
-                'Code',
-                'CodeKala',
-                'Name',
-                'Model',
-                'UCode',
-                'Vahed',
-                'KMegdar',
-                'KPrice',
-                'SPrice',
-                'KhordePrice',
-                'OmdePrice',
-                'HamkarPrice',
-                'AgsatPrice',
-                'CheckPrice',
-                'DForoosh',
-                'CShowInDevice',
-                'CFestival',
-                'GPoint',
-                'KVahed',
-                'PicName'
-            )
+            return $query
                 ->paginate(24, ['*'], 'product_page')
                 ->appends($request->query());
         } catch (Exception $e) {
