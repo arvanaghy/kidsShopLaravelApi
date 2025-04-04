@@ -12,6 +12,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
 use Intervention\Image\ImageManagerStatic as Image;
 use Exception;
+use Illuminate\Http\Response;
 
 
 class SubCategories extends Controller
