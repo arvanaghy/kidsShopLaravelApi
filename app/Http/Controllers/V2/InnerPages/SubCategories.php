@@ -219,7 +219,7 @@ class SubCategories extends Controller
 
             // Apply sorting
             $sortPrice = $request->query('sort_price', 'asc');
-            $query->orderBy('AV_KalaSizeColorMande_View.Mablag', in_array($sortPrice, ['asc', 'desc']) ? $sortPrice : 'asc');
+            // $query->orderBy('AV_KalaSizeColorMande_View.Mablag', in_array($sortPrice, ['asc', 'desc']) ? $sortPrice : 'asc');
 
             // Apply filters
             if ($search = $request->query('search')) {
