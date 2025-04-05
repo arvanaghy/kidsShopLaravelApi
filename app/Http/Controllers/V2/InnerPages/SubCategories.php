@@ -17,7 +17,7 @@ use Illuminate\Http\Response;
 
 class SubCategories extends Controller
 {
-    protected $active_company = null; 
+    protected $active_company = null;
     protected $financial_period = null;
 
 
@@ -222,33 +222,41 @@ class SubCategories extends Controller
         try {
             $request = request();
 
-            // Base query for products
             $query = ProductModel::with(['productSizeColor'])
                 ->where('CodeCompany', $this->active_company)
                 ->where('GCode', $categoryCode)
                 ->where('CShowInDevice', 1)
-                ->join('AV_KalaSizeColorMande_View', 'Code', '=', 'AV_KalaSizeColorMande_View.CodeKala');
+                ->orderBy('Code', 'DESC');
 
-            // Apply sorting
-            $sortPrice = $request->query('sort_price', 'asc');
-            // $query->orderBy('AV_KalaSizeColorMande_View.Mablag', in_array($sortPrice, ['asc', 'desc']) ? $sortPrice : 'asc');
+            if ($sortPrice = $request->query('sort_price')) {
+                $query->orderBy('SPrice', $sortPrice);
+            }
 
-            // Apply filters
             if ($search = $request->query('search')) {
                 $query->where('Name', 'LIKE', "%{$search}%");
             }
             if ($size = $request->query('size')) {
                 $sizes = explode(',', $size);
-                $query->whereIn('AV_KalaSizeColorMande_View.SizeNum', $sizes);
+                $query->whereHas('productSizeColor', function ($query) use ($sizes) {
+                    $query->whereIn('SizeNum', $sizes);
+                });
             }
             if ($color = $request->query('color')) {
                 $colors = explode(',', $color);
-                $query->whereIn('AV_KalaSizeColorMande_View.ColorCode', $colors);
+                $query->whereHas('productSizeColor', function ($query) use ($colors) {
+                    $query->whereIn('ColorCode', $colors);
+                });
             }
 
-            // Clone the query for image creation to avoid affecting the main query
-            $imageQuery = clone $query;
-            $imageCreation = $imageQuery->select('Pic', 'ImageCode', 'created_at', 'GCode', 'SCode', 'Code', 'PicName')
+            $imageCreation = $query->select([
+                'Pic',
+                'ImageCode',
+                'created_at',
+                'GCode',
+                'SCode',
+                'Code',
+                'PicName'
+            ])
                 ->paginate(24, ['*'], 'product_page');
 
             // Process images
@@ -266,14 +274,38 @@ class SubCategories extends Controller
                 DB::table('Kala')->where('Code', $image->Code)->update(['CChangePic' => 0]);
             }
 
-            // Get the final product result with a fresh paginator
-            $productResult = $query->select('*')
+            $productResult = $query->select([
+                'CodeCompany',
+                'CanSelect',
+                'GCode',
+                'GName',
+                'Comment',
+                'SCode',
+                'SName',
+                'Code',
+                'Name',
+                'Model',
+                'UCode',
+                'Vahed',
+                'KMegdar',
+                'KPrice',
+                'SPrice',
+                'KhordePrice',
+                'OmdePrice',
+                'HamkarPrice',
+                'AgsatPrice',
+                'CheckPrice',
+                'DForoosh',
+                'CShowInDevice',
+                'CFestival',
+                'GPoint',
+                'KVahed',
+                'PicName'
+            ])
                 ->paginate(24, ['*'], 'product_page');
 
-            // Append query parameters to pagination links
             $productResult->appends($request->query());
 
-            // Return the paginator directly
             return $productResult;
         } catch (Exception $e) {
             return response()->json([

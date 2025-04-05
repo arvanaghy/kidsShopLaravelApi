@@ -15,7 +15,7 @@ use App\Http\Controllers\CheckOutController;
 */
 
 Route::get('/', function () {
-    return view('welcome');
+   phpinfo();
 });
 Route::get('/zarinpal-payment-callback', [CheckOutController::class, 'zarinpal_payment_callback'])->name('zarinpal-payment-callback');
 Route::get('/zarinpal-success-payment/{referenceId}', [CheckOutController::class, 'zarinpal_success_payment'])->name('zarinpal-success-payment');
