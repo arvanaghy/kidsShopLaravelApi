@@ -18,4 +18,9 @@ class ProductModel extends Model
     {
         return $this->hasMany(ProductSizeColorModel::class, 'CodeKala', 'Code');
     }
+    public function productImages(): HasMany
+    {
+        return $this->hasMany(ProductSizeColorModel::class, 'CodeKala', 'Code');
+    }
+
 }

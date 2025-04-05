@@ -14,6 +14,7 @@ use App\Http\Controllers\V2\InnerPages\HomeController as WebHomeController;
 use App\Http\Controllers\V2\InnerPages\SubCategories as WebSubCategories;
 use App\Http\Controllers\V2\InnerPages\CategoriesController as WebCategoriesController;
 use App\Http\Controllers\V2\InnerPages\GeneralController as WebGeneralController;
+use App\Http\Controllers\V2\InnerPages\ProductController as WebProductController;
 
 
 
@@ -93,5 +94,6 @@ Route::prefix('v2')->group(function () {
     Route::get('/home-page', [WebHomeController::class, 'homePage']);
     Route::get('/list-categories', [WebCategoriesController::class, 'listCategories']);
     Route::get('/list-subcategories/{Code}', [WebSubCategories::class, 'index']);
-    Route::get('/test', [WebSubCategories::class, 'testIt']);
+    Route::get('/list-subcategory-products/{Code}', [WebSubCategories::class, 'listSubcategoryProducts']);
+    Route::get('/show-product/{Code}', [WebProductController::class, 'showProduct']);
 });

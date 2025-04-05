@@ -12,7 +12,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
 use Intervention\Image\ImageManagerStatic as Image;
 use Exception;
-use Illuminate\Http\Response;
+
 
 
 class SubCategories extends Controller
@@ -73,6 +73,32 @@ class SubCategories extends Controller
         } catch (Exception $e) {
             return response()->json(['status' => false, 'message' => $e->getMessage()], 500);
         }
+    }
+    protected function removeCategoryImage($data)
+    {
+        if (!empty($data->PicName)) {
+            $webpPath = public_path("category-images/webp/" . $data->PicName . ".webp");
+            if (File::exists($webpPath)) {
+                File::delete($webpPath);
+            }
+        }
+    }
+
+    protected function CreateCategoryImages($data, $picName)
+    {
+        if (empty($data->Pic)) {
+            return;
+        }
+
+        $imagePath = public_path("category-images/original/" . $picName . ".jpg");
+        $webpPath = public_path("category-images/webp/" . $picName . ".webp");
+
+        File::put($imagePath, $data->Pic);
+
+        Image::configure(['driver' => 'gd']);
+        Image::make($imagePath)->encode('webp', 100)->resize(250, 250)->save($webpPath);
+
+        File::delete($imagePath);
     }
 
     protected function CreateProductPath($data)
@@ -204,10 +230,64 @@ class SubCategories extends Controller
     }
 
 
-    protected function fetchCategoryName($Code)
+    protected function fetchCategory($Code)
     {
         try {
-            return CategoryModel::select('Code', 'Name', 'Comment', 'PicName')->where('CodeCompany', $this->active_company)->where('Code', $Code)->first();
+            $query = CategoryModel::where('CodeCompany', $this->active_company)->where('Code', $Code);
+
+            $imageQuery = $query->select('*')->first();
+
+            if ($imageQuery->CChangePic == 1) {
+                if (!empty($imageQuery->PicName)) {
+                    $this->removeCategoryImage($imageQuery);
+                }
+
+                if (!empty($imageQuery->Pic)) {
+                    $picName = ceil($imageQuery->Code) . "_" . rand(10000, 99999);
+                    $this->CreateCategoryImages($imageQuery, $picName);
+                    $updateData = ['CChangePic' => 0, 'PicName' => $picName];
+                } else {
+                    $updateData = ['CChangePic' => 0, 'PicName' => null];
+                }
+
+                DB::table('KalaGroup')->where('Code', $imageQuery->Code)->update($updateData);
+            }
+
+            $result = $query->select('Code', 'Name', 'Comment', 'PicName')->first();
+            return $result;
+        } catch (Exception $e) {
+            return response()->json([
+                'message' => $e->getMessage(),
+                'result' => null
+            ], 503);
+        }
+    }
+
+    protected function fetchSubCategory($Code)
+    {
+        try {
+            $query = SubCategoryModel::where('CodeCompany', $this->active_company)->where('Code', $Code);
+
+            $imageQuery = $query->select('*')->first();
+
+            if ($imageQuery->CChangePic == 1) {
+                if (!empty($imageQuery->PicName)) {
+                    $this->removeCategoryImage($imageQuery);
+                }
+
+                if (!empty($imageQuery->Pic)) {
+                    $picName = ceil($imageQuery->Code) . "_" . rand(10000, 99999);
+                    $this->CreateSubCategoryImages($imageQuery, $picName);
+                    $updateData = ['CChangePic' => 0, 'PicName' => $picName];
+                } else {
+                    $updateData = ['CChangePic' => 0, 'PicName' => null];
+                }
+
+                DB::table('KalaSubGroup')->where('Code', $imageQuery->Code)->update($updateData);
+            }
+
+            $result = $query->select('Code', 'Name', 'Comment', 'PicName')->first();
+            return $result;
         } catch (Exception $e) {
             return response()->json([
                 'message' => $e->getMessage(),
@@ -217,7 +297,7 @@ class SubCategories extends Controller
     }
 
 
-    public function list_category_products($categoryCode)
+    protected function list_category_products($categoryCode)
     {
         try {
             $request = request();
@@ -255,11 +335,11 @@ class SubCategories extends Controller
                 'GCode',
                 'SCode',
                 'Code',
+                'CChangePic',
                 'PicName'
             ])
                 ->paginate(24, ['*'], 'product_page');
 
-            // Process images
             foreach ($imageCreation as $image) {
                 if ($image->CChangePic == 1) {
                     $this->removeProductImages($image);
@@ -315,37 +395,318 @@ class SubCategories extends Controller
         }
     }
 
+    protected function list_subcategory_products($subcategoryCode)
+    {
+        try {
+            $request = request();
+
+            $query = ProductModel::with(['productSizeColor'])
+                ->where('CodeCompany', $this->active_company)
+                ->where('SCode', $subcategoryCode)
+                ->where('CShowInDevice', 1)
+                ->orderBy('Code', 'DESC');
+
+            if ($sortPrice = $request->query('sort_price')) {
+                $query->orderBy('SPrice', $sortPrice);
+            }
+
+            if ($search = $request->query('search')) {
+                $query->where('Name', 'LIKE', "%{$search}%");
+            }
+            if ($size = $request->query('size')) {
+                $sizes = explode(',', $size);
+                $query->whereHas('productSizeColor', function ($query) use ($sizes) {
+                    $query->whereIn('SizeNum', $sizes);
+                });
+            }
+            if ($color = $request->query('color')) {
+                $colors = explode(',', $color);
+                $query->whereHas('productSizeColor', function ($query) use ($colors) {
+                    $query->whereIn('ColorCode', $colors);
+                });
+            }
+
+            $imageCreation = $query->select([
+                'Pic',
+                'ImageCode',
+                'created_at',
+                'GCode',
+                'SCode',
+                'Code',
+                'CChangePic',
+                'PicName'
+            ])
+                ->paginate(24, ['*'], 'product_page');
+
+            foreach ($imageCreation as $image) {
+                if ($image->CChangePic == 1) {
+                    $this->removeProductImages($image);
+                }
+                if (!empty($image->Pic)) {
+                    $this->CreateProductPath($image);
+                    $createdAt = Carbon::parse($image->created_at);
+                    $picName = ceil($image->ImageCode) . "_" . $createdAt->getTimestamp();
+                    $this->CreateProductImages($image, $picName);
+                    DB::table('KalaImage')->where('Code', $image->ImageCode)->update(['PicName' => $picName]);
+                }
+                DB::table('Kala')->where('Code', $image->Code)->update(['CChangePic' => 0]);
+            }
+
+            $productResult = $query->select([
+                'CodeCompany',
+                'CanSelect',
+                'GCode',
+                'GName',
+                'Comment',
+                'SCode',
+                'SName',
+                'Code',
+                'Name',
+                'Model',
+                'UCode',
+                'Vahed',
+                'KMegdar',
+                'KPrice',
+                'SPrice',
+                'KhordePrice',
+                'OmdePrice',
+                'HamkarPrice',
+                'AgsatPrice',
+                'CheckPrice',
+                'DForoosh',
+                'CShowInDevice',
+                'CFestival',
+                'GPoint',
+                'KVahed',
+                'PicName'
+            ])
+                ->paginate(24, ['*'], 'product_page');
+
+            $productResult->appends($request->query());
+
+            return $productResult;
+        } catch (Exception $e) {
+            return response()->json([
+                'message' => $e->getMessage(),
+                'result' => null
+            ], 500);
+        }
+    }
+
+    protected function list_colors($resultProducts)
+    {
+        try {
+            $products = $resultProducts->items();
+
+            if (empty($products)) {
+                return [];
+            }
+
+            $colors = [];
+            foreach ($products as $product) {
+                if ($product->productSizeColor && $product->productSizeColor->isNotEmpty()) {
+                    foreach ($product->productSizeColor as $sizeColor) {
+                        if (!is_null($sizeColor->ColorCode) && !is_null($sizeColor->ColorName)) {
+                            $colors[] = [
+                                'ColorCode' => $sizeColor->ColorCode,
+                                'ColorName' => $sizeColor->ColorName
+                            ];
+                        }
+                    }
+                }
+            }
+
+            if (empty($colors)) {
+                return [];
+            }
+
+            $uniqueColors = array_values(array_unique($colors, SORT_REGULAR));
+
+            return $uniqueColors;
+        } catch (Exception $e) {
+            return response()->json([
+                'message' => $e->getMessage(),
+                'result' => null
+            ], 500);
+        }
+    }
+
+    protected function list_sizes($resultProducts)
+    {
+        try {
+            $products = $resultProducts->items();
+
+            if (empty($products)) {
+                return [];
+            }
+
+            $sizes = [];
+            foreach ($products as $product) {
+                if ($product->productSizeColor && $product->productSizeColor->isNotEmpty()) {
+                    foreach ($product->productSizeColor as $sizeColor) {
+                        if (!is_null($sizeColor->SizeNum)) {
+                            $sizes[] = $sizeColor->SizeNum;
+                        }
+                    }
+                }
+            }
+
+            if (empty($sizes)) {
+                return [];
+            }
+
+            $uniqueSizes = array_values(array_unique($sizes));
+
+            return $uniqueSizes;
+        } catch (Exception $e) {
+            return response()->json([
+                'message' => $e->getMessage(),
+                'result' => null
+            ], 500);
+        }
+    }
+
+    protected function list_prices($resultProducts)
+    {
+        try {
+
+            $products = $resultProducts->items();
+
+            if (empty($products)) {
+                return [
+                    'min_price' => null,
+                    'max_price' => null
+                ];
+            }
+
+            $prices = array_filter(array_map(function ($product) {
+                return $product->SPrice;
+            }, $products), function ($price) {
+                return !is_null($price);
+            });
+
+            if (empty($prices)) {
+                return [
+                    'min_price' => null,
+                    'max_price' => null
+                ];
+            }
+
+            return [
+                'min_price' => min($prices),
+                'max_price' => max($prices)
+            ];
+        } catch (Exception $e) {
+            return response()->json([
+                'message' => $e->getMessage(),
+                'result' => null
+            ], 500);
+        }
+    }
+
+    protected function list_offers($categoryCode)
+    {
+        try {
+            $query = ProductModel::with(['productSizeColor'])->where('CodeCompany', $this->active_company)
+                ->where('GCode', $categoryCode)
+                ->where('CShowInDevice', 1)
+                ->where('CFestival', 1)
+                ->orderBy('Code', 'DESC');
+            $imageCreation = $query->select([
+                'Pic',
+                'ImageCode',
+                'created_at',
+                'GCode',
+                'SCode',
+                'Code',
+                'CChangePic',
+                'PicName'
+            ])->Limit(16)->get();
+            foreach ($imageCreation as $image) {
+                if ($image->CChangePic == 1) {
+                    $this->removeProductImages($image);
+                }
+                if (!empty($image->Pic)) {
+                    $this->CreateProductPath($image);
+                    $createdAt = Carbon::parse($image->created_at);
+                    $picName = ceil($image->ImageCode) . "_" . $createdAt->getTimestamp();
+                    $this->CreateProductImages($image, $picName);
+                    DB::table('KalaImage')->where('Code', $image->ImageCode)->update(['PicName' => $picName]);
+                }
+                DB::table('Kala')->where('Code', $image->Code)->update(['CChangePic' => 0]);
+            }
+
+            $offersResult = $query->select([
+                'CodeCompany',
+                'CanSelect',
+                'GCode',
+                'GName',
+                'Comment',
+                'SCode',
+                'SName',
+                'Code',
+                'Name',
+                'Model',
+                'UCode',
+                'Vahed',
+                'KMegdar',
+                'KPrice',
+                'SPrice',
+                'KhordePrice',
+                'OmdePrice',
+                'HamkarPrice',
+                'AgsatPrice',
+                'CheckPrice',
+                'DForoosh',
+                'CShowInDevice',
+                'CFestival',
+                'GPoint',
+                'KVahed',
+                'PicName'
+            ])->limit(16)->get();
+            return  $offersResult;
+        } catch (Exception $e) {
+            return response()->json([
+                'message' => $e->getMessage(),
+                'result' => null
+            ]);
+        }
+    }
+
     public function index(Request $request, $Code)
     {
         try {
             $subcategoryPage = $request->query('subcategory_page', 1);
             $productPage = $request->query('product_page', 1);
 
-            // Fetch subcategories
             $subcategories = $this->list_subcategories($Code);
             if ($subcategories instanceof \Illuminate\Http\JsonResponse) {
-                return $subcategories; // Return error response immediately
+                return $subcategories;
             }
             $subcategories->appends(['subcategory_page' => $subcategoryPage, 'product_page' => $productPage]);
 
-            // Fetch category products
             $categoryProducts = $this->list_category_products($Code);
             if ($categoryProducts instanceof \Illuminate\Http\JsonResponse) {
-                return $categoryProducts; // Return error response immediately
+                return $categoryProducts;
             }
             $categoryProducts->appends(['subcategory_page' => $subcategoryPage, 'product_page' => $productPage]);
 
-            // Fetch category name
-            $category = $this->fetchCategoryName($Code);
+            $category = $this->fetchCategory($Code);
             if ($category instanceof \Illuminate\Http\JsonResponse) {
-                return $category; // Return error response immediately
+                return $category;
             }
+
+
 
             return response()->json([
                 'result' => [
                     'subcategories' => $subcategories,
                     'category' => $category,
-                    'categoryProducts' => $categoryProducts,
+                    'products' => $categoryProducts,
+                    'colors' => $this->list_colors($categoryProducts),
+                    'sizes' => $this->list_sizes($categoryProducts),
+                    'prices' => $this->list_prices($categoryProducts),
+                    'offers' => $this->list_offers($Code),
                 ],
                 'message' => 'دریافت اطلاعات با موفقیت انجام شد'
             ], 200);
@@ -357,10 +718,33 @@ class SubCategories extends Controller
         }
     }
 
-    public function testIt()
+    public function listSubcategoryProducts(Request $request, $Code)
     {
         try {
-            return DB::table('AV_KalaSizeColorMande_View')->get();
+            $productPage = $request->query('product_page', 1);
+
+            $subcategoryProducts = $this->list_subcategory_products($Code);
+            if ($subcategoryProducts instanceof \Illuminate\Http\JsonResponse) {
+                return $subcategoryProducts;
+            }
+            $subcategoryProducts->appends(['product_page' => $productPage]);
+
+            $subcategory = $this->fetchSubCategory($Code);
+            if ($subcategory instanceof \Illuminate\Http\JsonResponse) {
+                return $subcategory;
+            }
+
+            return response()->json([
+                'result' => [
+                    'subcategory' => $subcategory,
+                    'products' => $subcategoryProducts,
+                    'colors' => $this->list_colors($subcategoryProducts),
+                    'sizes' => $this->list_sizes($subcategoryProducts),
+                    'prices' => $this->list_prices($subcategoryProducts),
+                    'offers' => $this->list_offers($Code),
+                ],
+                'message' => 'دریافت اطلاعات با موفقیت انجام شد'
+            ], 200);
         } catch (Exception $e) {
             return response()->json([
                 'status' => false,
