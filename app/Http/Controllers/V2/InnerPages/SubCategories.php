@@ -76,6 +76,19 @@ class SubCategories extends Controller
         }
     }
 
+    protected function CreateProductPath($data)
+    {
+        $basePath = public_path("products-image");
+        $subPaths = ["original", "webp"];
+
+        array_map(function ($type) use ($basePath, $data) {
+            $dir = "$basePath/$type/" . ceil($data->GCode) . "/" . ceil($data->SCode);
+            if (!File::exists($dir)) {
+                File::makeDirectory($dir, 0755, true, true);
+            }
+        }, $subPaths);
+    }
+
     protected function CreateSubCategoryImages($data, $picName)
     {
 
@@ -215,7 +228,7 @@ class SubCategories extends Controller
                 ->where('CodeCompany', $this->active_company)
                 ->where('GCode', $categoryCode)
                 ->where('CShowInDevice', 1)
-                ->join('AV_KalaSizeColorMande_View', 'AV_KalaList_View.Code', '=', 'AV_KalaSizeColorMande_View.CodeKala');
+                ->join('AV_KalaSizeColorMande_View', 'Code', '=', 'AV_KalaSizeColorMande_View.CodeKala');
 
             // Apply sorting
             $sortPrice = $request->query('sort_price', 'asc');
