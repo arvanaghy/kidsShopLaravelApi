@@ -18,7 +18,7 @@ use Illuminate\Http\Response;
 class SubCategories extends Controller
 {
 
-    protected $active_company = null;
+    protected $active_company = null; 
     protected $financial_period = null;
 
 
