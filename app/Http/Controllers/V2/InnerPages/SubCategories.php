@@ -286,7 +286,7 @@ class SubCategories extends Controller
                 DB::table('KalaSubGroup')->where('Code', $imageQuery->Code)->update($updateData);
             }
 
-            $result = $query->select('Code', 'Name', 'Comment', 'PicName')->first();
+            $result = $query->select('Code', 'Name', 'PicName')->first();
             return $result;
         } catch (Exception $e) {
             return response()->json([
@@ -295,7 +295,6 @@ class SubCategories extends Controller
             ], 503);
         }
     }
-
 
     protected function list_category_products($categoryCode)
     {
