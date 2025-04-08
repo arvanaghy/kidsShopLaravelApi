@@ -19,7 +19,6 @@ class HomeController extends Controller
     protected $active_company = null;
     protected $financial_period = null;
 
-
     protected function CreateCategoryPath()
     {
         $paths = [
@@ -52,11 +51,28 @@ class HomeController extends Controller
         }
     }
 
+    protected function CreateProductPath()
+    {
+        $paths = [
+            "products-image",
+            "products-image/original",
+            "products-image/webp"
+        ];
+
+        foreach ($paths as $path) {
+            $fullPath = public_path($path);
+            if (!File::isDirectory($fullPath)) {
+                File::makeDirectory($fullPath, 0755, true, true);
+            }
+        }
+    }
+
     public function __construct(Request $request)
     {
         try {
             $this->CreateCategoryPath();
             $this->CreateBannerPath();
+            $this->CreateProductPath();
 
             $this->active_company = DB::table('Company')
                 ->where('DeviceSelected', 1)
@@ -220,21 +236,29 @@ class HomeController extends Controller
         }
     }
 
-    protected function CreateProductPath($data)
-    {
-        $basePath = public_path("products-image");
-        $subPaths = ["original", "webp"];
-
-        array_map(function ($type) use ($basePath, $data) {
-            $dir = "$basePath/$type/" . ceil($data->GCode) . "/" . ceil($data->SCode);
-            if (!File::exists($dir)) {
-                File::makeDirectory($dir, 0755, true, true);
-            }
-        }, $subPaths);
-    }
-
     protected function CreateProductImages($data, $picName)
     {
+
+        $GCodePathOriginal = public_path('products-image/original/' . ceil($data->GCode));
+        if (!File::isDirectory($GCodePathOriginal)) {
+            File::makeDirectory($GCodePathOriginal, 0755, true, true);
+        }
+
+        $SCodePathOriginal = public_path('products-image/original/' . ceil($data->GCode) . '/' . ceil($data->SCode));
+        if (!File::isDirectory($SCodePathOriginal)) {
+            File::makeDirectory($SCodePathOriginal, 0755, true, true);
+        }
+
+        $GCodePathWebp = public_path('products-image/webp/' . ceil($data->GCode));
+        if (!File::isDirectory($GCodePathWebp)) {
+            File::makeDirectory($GCodePathWebp, 0755, true, true);
+        }
+
+        $SCodePathWebp = public_path('products-image/webp/' . ceil($data->GCode) . '/' . ceil($data->SCode));
+        if (!File::isDirectory($SCodePathWebp)) {
+            File::makeDirectory($SCodePathWebp, 0755, true, true);
+        }
+
         $dir = "products-image/original/" . ceil($data->GCode) . "/" . ceil($data->SCode);
         $webpDir = "products-image/webp/" . ceil($data->GCode) . "/" . ceil($data->SCode);
 
@@ -250,19 +274,39 @@ class HomeController extends Controller
         File::delete(public_path($imagePath));
     }
 
-    protected function removeProductImages($data)
+    public function getTableColumns()
     {
         try {
-            $dir = "products-image/original/" . ceil($data->GCode) . "/" . ceil($data->SCode);
-            $webpDir = "products-image/webp/" . ceil($data->GCode) . "/" . ceil($data->SCode);
-            if (File::exists($dir)) {
-                File::deleteDirectory($dir);
-            }
-            if (File::exists($webpDir)) {
-                File::deleteDirectory($webpDir);
-            }
+            $tableName = (new ProductModel)->getTable();
+
+            // Query INFORMATION_SCHEMA.COLUMNS for SQL Server
+            $columns = DB::select("
+                SELECT 
+                    COLUMN_NAME AS Field,
+                    DATA_TYPE AS Type,
+                    IS_NULLABLE AS Nullable,
+                    COLUMN_DEFAULT AS DefaultValue
+                FROM INFORMATION_SCHEMA.COLUMNS 
+                WHERE TABLE_NAME = ?
+            ", [$tableName]);
+
+            // Format the response
+            $columnDetails = array_map(function ($column) {
+                return [
+                    'name' => $column->Field,
+                    'type' => $column->Type,
+                    'nullable' => $column->Nullable === 'YES',
+                    'default' => $column->DefaultValue,
+                    'key' => null, // SQL Server doesn't provide key info directly here; requires separate query if needed
+                ];
+            }, $columns);
+
+            return response()->json($columnDetails);
         } catch (\Exception $e) {
-            return;
+            return response()->json([
+                'error' => 'Unable to fetch table columns',
+                'message' => $e->getMessage()
+            ], 500);
         }
     }
 
@@ -271,23 +315,27 @@ class HomeController extends Controller
         try {
             $imageResults = ProductModel::where('CodeCompany', $this->active_company)
                 ->where('CShowInDevice', 1)
-                ->select('Pic', 'ImageCode', 'created_at', 'GCode', 'SCode', 'Code', 'PicName')
+                ->select(
+                    'Pic',
+                    'Code',
+                    'created_at',
+                    'GCode',
+                    'ImageCode',
+                    'SCode',
+                    'Code',
+                    'PicName'
+                )
                 ->orderBy('UCode', 'ASC')
                 ->limit(16)
                 ->get();
 
             foreach ($imageResults as $image) {
-                if ($image->CChangePic == 1) {
-                    $this->removeProductImages($image);
-                }
-                if (!empty($image->Pic)) {
-                    $this->CreateProductPath($image);
+                if ($image->CChangePic == 1 && !empty($image->Pic)) {
                     $picName = ceil($image->ImageCode) . "_" . $image->created_at->getTimestamp();
                     $this->CreateProductImages($image, $picName);
                     DB::table('KalaImage')->where('Code', $image->ImageCode)->update(['PicName' => $picName]);
+                    DB::table('Kala')->where('Code', $image->Code)->update(['CChangePic' => 0]);
                 }
-
-                DB::table('Kala')->where('Code', $image->Code)->update(['CChangePic' => 0]);
             }
 
             return ProductModel::where('CodeCompany', $this->active_company)
@@ -332,7 +380,6 @@ class HomeController extends Controller
         }
     }
 
-
     protected function offerd_products()
     {
 
@@ -346,17 +393,12 @@ class HomeController extends Controller
                 ->get();
 
             foreach ($imageResults as $image) {
-                if ($image->CChangePic == 1) {
-                    $this->removeProductImages($image);
-                }
-                if (!empty($image->Pic)) {
-                    $this->CreateProductPath($image);
+                if ($image->CChangePic == 1 && !empty($image->Pic)) {
                     $picName = ceil($image->ImageCode) . "_" . $image->created_at->getTimestamp();
                     $this->CreateProductImages($image, $picName);
                     DB::table('KalaImage')->where('Code', $image->ImageCode)->update(['PicName' => $picName]);
+                    DB::table('Kala')->where('Code', $image->Code)->update(['CChangePic' => 0]);
                 }
-
-                DB::table('Kala')->where('Code', $image->Code)->update(['CChangePic' => 0]);
             }
 
             return ProductModel::where('CodeCompany', $this->active_company)
@@ -412,20 +454,13 @@ class HomeController extends Controller
                 ->get();
 
             foreach ($imageResults as $image) {
-                if ($image->CChangePic == 1) {
-                    $this->removeProductImages($image);
-                }
-                if (!empty($image->Pic)) {
-                    $this->CreateProductPath($image);
-
+                if ($image->CChangePic == 1 && !empty($image->Pic)) {
                     $createdAt = Carbon::parse($image->created_at);
                     $picName = ceil($image->ImageCode) . "_" . $createdAt->getTimestamp();
-
                     $this->CreateProductImages($image, $picName);
                     DB::table('KalaImage')->where('Code', $image->ImageCode)->update(['PicName' => $picName]);
+                    DB::table('Kala')->where('Code', $image->Code)->update(['CChangePic' => 0]);
                 }
-
-                DB::table('Kala')->where('Code', $image->Code)->update(['CChangePic' => 0]);
             }
 
             return  DB::table('AV_KalaTedadForooshKol_View')->select(
@@ -468,7 +503,6 @@ class HomeController extends Controller
                     'newestProducts' => $this->fetchNewestProducts(),
                     'offeredProducts' => $this->offerd_products(),
                     'bestSeller' => $this->bestSeller(),
-
                 ],
                 'message' => 'دریافت اطلاعات با موفقیت انجام شد'
             ], 200);

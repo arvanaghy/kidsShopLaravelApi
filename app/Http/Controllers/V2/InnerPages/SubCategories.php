@@ -21,6 +21,22 @@ class SubCategories extends Controller
     protected $financial_period = null;
 
 
+    protected function CreateProductPath()
+    {
+        $paths = [
+            "products-image",
+            "products-image/original",
+            "products-image/webp"
+        ];
+
+        foreach ($paths as $path) {
+            $fullPath = public_path($path);
+            if (!File::isDirectory($fullPath)) {
+                File::makeDirectory($fullPath, 0755, true, true);
+            }
+        }
+    }
+
     protected function CreateCategoryPath()
     {
         $paths = [
@@ -58,6 +74,8 @@ class SubCategories extends Controller
         try {
             $this->CreateCategoryPath();
             $this->CreateSubCategoryPath();
+            $this->CreateProductPath();
+
             $this->active_company = DB::table('Company')
                 ->where('DeviceSelected', 1)
                 ->pluck('Code')
@@ -101,19 +119,6 @@ class SubCategories extends Controller
         File::delete($imagePath);
     }
 
-    protected function CreateProductPath($data)
-    {
-        $basePath = public_path("products-image");
-        $subPaths = ["original", "webp"];
-
-        array_map(function ($type) use ($basePath, $data) {
-            $dir = "$basePath/$type/" . ceil($data->GCode) . "/" . ceil($data->SCode);
-            if (!File::exists($dir)) {
-                File::makeDirectory($dir, 0755, true, true);
-            }
-        }, $subPaths);
-    }
-
     protected function CreateSubCategoryImages($data, $picName)
     {
 
@@ -142,21 +147,28 @@ class SubCategories extends Controller
         }
     }
 
-    protected function CreateProductImagesPath($data)
-    {
-        $basePath = public_path("products-image");
-        $subPaths = ["original", "webp"];
-
-        array_map(function ($type) use ($basePath, $data) {
-            $dir = "$basePath/$type/" . ceil($data->GCode) . "/" . ceil($data->SCode);
-            if (!File::exists($dir)) {
-                File::makeDirectory($dir, 0755, true, true);
-            }
-        }, $subPaths);
-    }
-
     protected function CreateProductImages($data, $picName)
     {
+        $GCodePathOriginal = public_path('products-image/original/' . ceil($data->GCode));
+        if (!File::isDirectory($GCodePathOriginal)) {
+            File::makeDirectory($GCodePathOriginal, 0755, true, true);
+        }
+
+        $SCodePathOriginal = public_path('products-image/original/' . ceil($data->GCode) . '/' . ceil($data->SCode));
+        if (!File::isDirectory($SCodePathOriginal)) {
+            File::makeDirectory($SCodePathOriginal, 0755, true, true);
+        }
+
+        $GCodePathWebp = public_path('products-image/webp/' . ceil($data->GCode));
+        if (!File::isDirectory($GCodePathWebp)) {
+            File::makeDirectory($GCodePathWebp, 0755, true, true);
+        }
+
+        $SCodePathWebp = public_path('products-image/webp/' . ceil($data->GCode) . '/' . ceil($data->SCode));
+        if (!File::isDirectory($SCodePathWebp)) {
+            File::makeDirectory($SCodePathWebp, 0755, true, true);
+        }
+
         $dir = "products-image/original/" . ceil($data->GCode) . "/" . ceil($data->SCode);
         $webpDir = "products-image/webp/" . ceil($data->GCode) . "/" . ceil($data->SCode);
 
@@ -171,23 +183,6 @@ class SubCategories extends Controller
 
         File::delete(public_path($imagePath));
     }
-
-    protected function removeProductImages($data)
-    {
-        try {
-            $dir = "products-image/original/" . ceil($data->GCode) . "/" . ceil($data->SCode);
-            $webpDir = "products-image/webp/" . ceil($data->GCode) . "/" . ceil($data->SCode);
-            if (File::exists($dir)) {
-                File::deleteDirectory($dir);
-            }
-            if (File::exists($webpDir)) {
-                File::deleteDirectory($webpDir);
-            }
-        } catch (\Exception $e) {
-            return;
-        }
-    }
-
 
     protected function list_subcategories($Code)
     {
@@ -228,7 +223,6 @@ class SubCategories extends Controller
             ], 503);
         }
     }
-
 
     protected function fetchCategory($Code)
     {
@@ -340,17 +334,13 @@ class SubCategories extends Controller
                 ->paginate(24, ['*'], 'product_page');
 
             foreach ($imageCreation as $image) {
-                if ($image->CChangePic == 1) {
-                    $this->removeProductImages($image);
-                }
-                if (!empty($image->Pic)) {
-                    $this->CreateProductPath($image);
+                if ($image->CChangePic == 1 && !empty($image->Pic)) {
                     $createdAt = Carbon::parse($image->created_at);
                     $picName = ceil($image->ImageCode) . "_" . $createdAt->getTimestamp();
                     $this->CreateProductImages($image, $picName);
                     DB::table('KalaImage')->where('Code', $image->ImageCode)->update(['PicName' => $picName]);
+                    DB::table('Kala')->where('Code', $image->Code)->update(['CChangePic' => 0]);
                 }
-                DB::table('Kala')->where('Code', $image->Code)->update(['CChangePic' => 0]);
             }
 
             $productResult = $query->select([
@@ -438,17 +428,13 @@ class SubCategories extends Controller
                 ->paginate(24, ['*'], 'product_page');
 
             foreach ($imageCreation as $image) {
-                if ($image->CChangePic == 1) {
-                    $this->removeProductImages($image);
-                }
-                if (!empty($image->Pic)) {
-                    $this->CreateProductPath($image);
+                if ($image->CChangePic == 1 && !empty($image->Pic)) {
                     $createdAt = Carbon::parse($image->created_at);
                     $picName = ceil($image->ImageCode) . "_" . $createdAt->getTimestamp();
                     $this->CreateProductImages($image, $picName);
                     DB::table('KalaImage')->where('Code', $image->ImageCode)->update(['PicName' => $picName]);
+                    DB::table('Kala')->where('Code', $image->Code)->update(['CChangePic' => 0]);
                 }
-                DB::table('Kala')->where('Code', $image->Code)->update(['CChangePic' => 0]);
             }
 
             $productResult = $query->select([

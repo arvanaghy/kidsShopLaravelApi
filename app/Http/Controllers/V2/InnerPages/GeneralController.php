@@ -81,7 +81,6 @@ class GeneralController extends Controller
         File::delete($imagePath);
     }
 
-
     public function topMenu()
     {
         try {

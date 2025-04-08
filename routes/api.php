@@ -15,6 +15,7 @@ use App\Http\Controllers\V2\InnerPages\SubCategories as WebSubCategories;
 use App\Http\Controllers\V2\InnerPages\CategoriesController as WebCategoriesController;
 use App\Http\Controllers\V2\InnerPages\GeneralController as WebGeneralController;
 use App\Http\Controllers\V2\InnerPages\ProductController as WebProductController;
+use App\Http\Controllers\V2\OrderController as WebOrderController;
 
 
 
@@ -96,4 +97,8 @@ Route::prefix('v2')->group(function () {
     Route::get('/list-subcategories/{Code}', [WebSubCategories::class, 'index']);
     Route::get('/list-subcategory-products/{Code}', [WebSubCategories::class, 'listSubcategoryProducts']);
     Route::get('/show-product/{Code}', [WebProductController::class, 'showProduct']);
+    Route::get('/list-columns', [WebHomeController::class, 'getTableColumns']);
+    Route::middleware('customerConfirm')->group(function () {
+        Route::post('/submit-order', [OrderController::class, 'submit_order']);
+    });
 });

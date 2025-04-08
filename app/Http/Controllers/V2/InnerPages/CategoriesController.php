@@ -10,12 +10,10 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
 use Intervention\Image\ImageManagerStatic as Image;
 
-
 class CategoriesController extends Controller
 {
     protected $active_company = null;
     protected $financial_period = null;
-
 
     protected function CreateCategoryPath()
     {
@@ -82,21 +80,25 @@ class CategoriesController extends Controller
         File::delete($imagePath);
     }
 
-
     public function listCategories(Request $request)
     {
         try {
+            $search = $request->input('search'); 
+
             $categotyImageCreation = CategoryModel::select('Pic', 'Code', 'CChangePic', 'PicName')
                 ->where('CodeCompany', $this->active_company)
+                ->when($search, function ($query, $search) {
+                    return $query->where('Name', 'like', '%' . $search . '%');
+                })
                 ->orderBy('Code', 'DESC')
                 ->paginate(24);
-
+    
             foreach ($categotyImageCreation as $categoryImage) {
                 if ($categoryImage->CChangePic == 1) {
                     if (!empty($categoryImage->PicName)) {
                         $this->removeCategoryImage($categoryImage);
                     }
-
+    
                     if (!empty($categoryImage->Pic)) {
                         $picName = ceil($categoryImage->Code) . "_" . rand(10000, 99999);
                         $this->CreateCategoryImages($categoryImage, $picName);
@@ -104,17 +106,19 @@ class CategoriesController extends Controller
                     } else {
                         $updateData = ['CChangePic' => 0, 'PicName' => null];
                     }
-
+    
                     DB::table('KalaGroup')->where('Code', $categoryImage->Code)->update($updateData);
                 }
             }
             
-
             $categoriesList = CategoryModel::select('Code', 'Name', 'Comment', 'PicName')
                 ->where('CodeCompany', $this->active_company)
+                ->when($search, function ($query, $search) {
+                    return $query->where('Name', 'like', '%' . $search . '%');
+                })
                 ->orderBy('Code', 'DESC')
                 ->paginate(24);
-
+    
             return response()->json([
                 'result' => [
                     'categories' => $categoriesList
