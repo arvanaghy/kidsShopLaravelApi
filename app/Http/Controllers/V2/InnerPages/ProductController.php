@@ -120,6 +120,140 @@ class ProductController extends Controller
         }
     }
 
+    public function relatedProducts($GCode, $SCode)
+    {
+        try {
+            $imageResults = ProductModel::where('CodeCompany', $this->active_company)->where('GCode', $GCode)->where('SCode', $SCode)
+                ->where('CShowInDevice', 1)
+                ->select(
+                    'Pic',
+                    'Code',
+                    'created_at',
+                    'GCode',
+                    'ImageCode',
+                    'SCode',
+                    'Code',
+                    'PicName'
+                )
+                ->orderBy('UCode', 'ASC')
+                ->limit(16)
+                ->get();
+
+            foreach ($imageResults as $image) {
+                if ($image->CChangePic == 1 && !empty($image->Pic)) {
+                    $picName = ceil($image->ImageCode) . "_" . $image->created_at->getTimestamp();
+                    $this->CreateProductImages($image, $picName);
+                    DB::table('KalaImage')->where('Code', $image->ImageCode)->update(['PicName' => $picName]);
+                    DB::table('Kala')->where('Code', $image->Code)->update(['CChangePic' => 0]);
+                }
+            }
+
+            return ProductModel::with(['productSizeColor'])->where('CodeCompany', $this->active_company)
+                ->where('CShowInDevice', 1)
+                ->select(
+                    'CodeCompany',
+                    'CanSelect',
+                    'GCode',
+                    'GName',
+                    'Comment',
+                    'SCode',
+                    'SName',
+                    'Code',
+                    'CodeKala',
+                    'Name',
+                    'Model',
+                    'UCode',
+                    'Vahed',
+                    'KMegdar',
+                    'KPrice',
+                    'SPrice',
+                    'KhordePrice',
+                    'OmdePrice',
+                    'HamkarPrice',
+                    'AgsatPrice',
+                    'CheckPrice',
+                    'DForoosh',
+                    'CShowInDevice',
+                    'CFestival',
+                    'GPoint',
+                    'KVahed',
+                    'PicName'
+                )->where('GCode', $GCode)->where('SCode', $SCode)
+                ->orderBy('UCode', 'ASC')
+                ->limit(16)
+                ->get();
+        } catch (Exception $e) {
+            return response()->json([
+                'message' => 'Error: ' . $e->getMessage(),
+                'result'  => null,
+            ], 503);
+        }
+    }
+
+    protected function offerd_products()
+    {
+
+        try {
+            $imageResults = ProductModel::where('CodeCompany', $this->active_company)
+                ->where('CShowInDevice', 1)
+                ->where('CFestival', 1)
+                ->select('Pic', 'ImageCode', 'created_at', 'GCode', 'SCode', 'Code', 'PicName')
+                ->orderBy('UCode', 'ASC')
+                ->limit(16)
+                ->get();
+
+            foreach ($imageResults as $image) {
+                if ($image->CChangePic == 1 && !empty($image->Pic)) {
+                    $picName = ceil($image->ImageCode) . "_" . $image->created_at->getTimestamp();
+                    $this->CreateProductImages($image, $picName);
+                    DB::table('KalaImage')->where('Code', $image->ImageCode)->update(['PicName' => $picName]);
+                    DB::table('Kala')->where('Code', $image->Code)->update(['CChangePic' => 0]);
+                }
+            }
+
+            return ProductModel::with(['productSizeColor'])->where('CodeCompany', $this->active_company)
+                ->where('CShowInDevice', 1)
+                ->select(
+                    'CodeCompany',
+                    'CanSelect',
+                    'GCode',
+                    'GName',
+                    'Comment',
+                    'SCode',
+                    'SName',
+                    'Code',
+                    'CodeKala',
+                    'Name',
+                    'Model',
+                    'UCode',
+                    'Vahed',
+                    'KMegdar',
+                    'KPrice',
+                    'SPrice',
+                    'KhordePrice',
+                    'OmdePrice',
+                    'HamkarPrice',
+                    'AgsatPrice',
+                    'CheckPrice',
+                    'DForoosh',
+                    'CShowInDevice',
+                    'CFestival',
+                    'GPoint',
+                    'KVahed',
+                    'PicName'
+                )
+                ->where('CFestival', 1)
+                ->orderBy('UCode', 'ASC')
+                ->limit(16)
+                ->get();
+        } catch (Exception $e) {
+            return response()->json([
+                'message' => 'Error: ' . $e->getMessage(),
+                'result'  => null,
+            ], 503);
+        }
+    }
+
     public function showProduct(Request $request, $Code)
     {
         try {
@@ -173,9 +307,11 @@ class ProductController extends Controller
                 'KVahed',
             )->first();
 
+
             return response()->json([
                 'product' => $result,
-
+                'relatedProducts' => $this->relatedProducts($result->GCode, $result->SCode),
+                'offeredProducts' => $this->offerd_products(),
                 'message' => 'محصول با موفقیت نمایش داده شد'
             ]);
         } catch (Exception $e) {

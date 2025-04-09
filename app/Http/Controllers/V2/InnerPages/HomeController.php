@@ -338,7 +338,7 @@ class HomeController extends Controller
                 }
             }
 
-            return ProductModel::where('CodeCompany', $this->active_company)
+            return ProductModel::with(['productSizeColor'])->where('CodeCompany', $this->active_company)
                 ->where('CShowInDevice', 1)
                 ->select(
                     'CodeCompany',
@@ -401,7 +401,7 @@ class HomeController extends Controller
                 }
             }
 
-            return ProductModel::where('CodeCompany', $this->active_company)
+            return ProductModel::with(['productSizeColor'])->where('CodeCompany', $this->active_company)
                 ->where('CShowInDevice', 1)
                 ->select(
                     'CodeCompany',

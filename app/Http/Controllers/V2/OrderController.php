@@ -123,7 +123,7 @@ class OrderController extends Controller
 
                 $Sorder  = DB::table('AV_SOrder_View')->where('Code', $result->Code)->first();
 
-                $client_text_message = "مشتری گرامی " . $userResult->Name . " پیش فاکتور " . $result->Code . " به مبلغ " . $Sorder->JamKol . " در سیستم ثبت گردید. با تشکر الکتروشاپ24";
+                $client_text_message = "مشتری گرامی " . $userResult->Name . " پیش فاکتور " . $result->Code . " به مبلغ " . $Sorder->JamKol . " در سیستم ثبت گردید. با تشکر کیدزشاپ";
                 $this->send_sms_via_webone($userResult->Mobile, $client_text_message);
                 $admin_text_message = "پیش فاکتور جدید به شماره " . $result->Code . " به مبلغ " . $Sorder->JamKol .  "برای کاربر" . $userResult->Name .  " در سیستم ثبت گردید.";
                 $this->send_sms_via_webone('09354662900', $admin_text_message);

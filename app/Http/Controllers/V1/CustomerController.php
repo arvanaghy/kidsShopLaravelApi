@@ -134,7 +134,7 @@ class CustomerController extends Controller
                         ], 201);
                     } else {
                         $my_sms = $this->grenerate_sms($result['Code']);
-                        $sms_text_message = 'الکتروشاپ24 ، کد ورود به سیستم ' . $my_sms;
+                        $sms_text_message = 'کیدزشاپ ، کد ورود به سیستم ' . $my_sms;
                         $this->send_sms_via_webone($validated['phoneNumber'], $sms_text_message);
                         return response()->json([
                             "message" => 'کد پیام کوتاه برای شما ارسال شد',
@@ -339,7 +339,7 @@ class CustomerController extends Controller
                         'SMSTime' => $expireTime
                     ]);
 
-                    $client_sms_text_message = 'الکتروشاپ24  ، کد ورود به سیستم ' . $sms_code;
+                    $client_sms_text_message = 'کیدزشاپ  ، کد ورود به سیستم ' . $sms_code;
                     $this->send_sms_via_webone($validated['phoneNumber'], $client_sms_text_message);
                     $admin_sms_text_message = 'کاربر جدید با نام ' . $validated['name'] .  ' و شماره تلفن ' . $validated['phoneNumber'] . ' در سیستم ثبت گردید. ';
                     $this->send_sms_via_webone('09354662900', $admin_sms_text_message);
@@ -382,7 +382,7 @@ class CustomerController extends Controller
                         ], 401);
                     } else {
                         $my_sms = $this->grenerate_sms($result['Code']);
-                        $sms_text_message = 'الکتروشاپ24  ، کد ورود به سیستم ' . $my_sms;
+                        $sms_text_message = 'کیدزشاپ  ، کد ورود به سیستم ' . $my_sms;
                         $this->send_sms_via_webone($validated['phoneNumber'], $sms_text_message);
                         return response()->json([
                             "message" => 'کد پیام کوتاه برای شما ارسال شد',
