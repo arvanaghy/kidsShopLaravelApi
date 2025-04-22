@@ -318,4 +318,85 @@ class ProductController extends Controller
             return response()->json(['error' => $e->getMessage()], 500);
         }
     }
+
+    public function listAllProducts(Request $request)
+    {
+        try {
+
+            $productsQuery = ProductModel::where('CodeCompany', $this->active_company)
+                ->where('CShowInDevice', 1);
+
+            if ($sortPrice = $request->query('sort_price')) {
+                $productsQuery->orderBy('SPrice', $sortPrice);
+            }
+
+            if ($search = $request->query('search')) {
+                $productsQuery->where('Name', 'LIKE', "%{$search}%");
+            }
+
+
+            $imageCreation = $productsQuery->select([
+                'Pic',
+                'ImageCode',
+                'created_at',
+                'GCode',
+                'SCode',
+                'Code',
+                'CChangePic',
+                'PicName'
+            ])
+                ->paginate(24, ['*'], 'product_page');
+
+            foreach ($imageCreation as $image) {
+                if ($image->CChangePic == 1 && !empty($image->Pic)) {
+                    $createdAt = Carbon::parse($image->created_at);
+                    $picName = ceil($image->ImageCode) . "_" . $createdAt->getTimestamp();
+                    $this->CreateProductImages($image, $picName);
+                    DB::table('KalaImage')->where('Code', $image->ImageCode)->update(['PicName' => $picName]);
+                    DB::table('Kala')->where('Code', $image->Code)->update(['CChangePic' => 0]);
+                }
+            }
+
+            $productResult = $productsQuery->select([
+                'CodeCompany',
+                'CanSelect',
+                'GCode',
+                'GName',
+                'Comment',
+                'SCode',
+                'SName',
+                'Code',
+                'Name',
+                'Model',
+                'UCode',
+                'Vahed',
+                'KMegdar',
+                'KPrice',
+                'SPrice',
+                'KhordePrice',
+                'OmdePrice',
+                'HamkarPrice',
+                'AgsatPrice',
+                'CheckPrice',
+                'DForoosh',
+                'CShowInDevice',
+                'CFestival',
+                'GPoint',
+                'KVahed',
+                'PicName'
+            ])
+                ->paginate(24, ['*'], 'product_page');
+
+            $productResult->appends($request->query());
+
+
+
+            return response()->json([
+                'products' => $productResult,
+                'message' => 'محصولات با موفقیت نمایش داده شد'
+            ]);
+        } catch (Exception $e) {
+            return response()->json(['error' => $e->getMessage()], 500);
+        }
+    }
 }
