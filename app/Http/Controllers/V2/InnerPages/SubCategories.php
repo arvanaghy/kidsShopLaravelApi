@@ -298,29 +298,30 @@ class SubCategories extends Controller
             $query = ProductModel::with(['productSizeColor'])
                 ->where('CodeCompany', $this->active_company)
                 ->where('GCode', $categoryCode)
-                ->where('CShowInDevice', 1)
-                ->orderBy('Code', 'DESC');
+                ->where('CShowInDevice', 1);
 
-            if ($sortPrice = $request->query('sort_price')) {
+            $sortPrice = strtolower($request->query('sort_price'));
+            if ($request->has('sort_price') && in_array($sortPrice, ['asc', 'desc'])) {
                 $query->orderBy('SPrice', $sortPrice);
+            } else {
+                $query->orderBy('Code', 'DESC');
             }
 
-            if ($search = $request->query('search')) {
+            if ($search = $request->query('search') && $request->query('search') != '') {
                 $query->where('Name', 'LIKE', "%{$search}%");
             }
-            if ($size = $request->query('size')) {
+            if ($size = $request->query('size') && $request->query('size') != '') {
                 $sizes = explode(',', $size);
                 $query->whereHas('productSizeColor', function ($query) use ($sizes) {
                     $query->whereIn('SizeNum', $sizes);
                 });
             }
-            if ($color = $request->query('color')) {
+            if ($color = $request->query('color') && $request->query('color') != '') {
                 $colors = explode(',', $color);
                 $query->whereHas('productSizeColor', function ($query) use ($colors) {
                     $query->whereIn('ColorCode', $colors);
                 });
             }
-
             $imageCreation = $query->select([
                 'Pic',
                 'ImageCode',
@@ -478,10 +479,15 @@ class SubCategories extends Controller
         }
     }
 
-    protected function list_colors($resultProducts)
+    protected function list_colors($categoryCode)
     {
         try {
-            $products = $resultProducts->items();
+            $products = ProductModel::with(['productSizeColor'])
+                ->where('CodeCompany', $this->active_company)
+                ->where('GCode', $categoryCode)
+                ->where('CShowInDevice', 1)
+                ->orderBy('Code', 'DESC')
+                ->get();
 
             if (empty($products)) {
                 return [];
@@ -516,10 +522,15 @@ class SubCategories extends Controller
         }
     }
 
-    protected function list_sizes($resultProducts)
+    protected function list_sizes($categoryCode)
     {
         try {
-            $products = $resultProducts->items();
+            $products = ProductModel::with(['productSizeColor'])
+                ->where('CodeCompany', $this->active_company)
+                ->where('GCode', $categoryCode)
+                ->where('CShowInDevice', 1)
+                ->orderBy('Code', 'DESC')
+                ->get();
 
             if (empty($products)) {
                 return [];
@@ -688,8 +699,8 @@ class SubCategories extends Controller
                     'subcategories' => $subcategories,
                     'category' => $category,
                     'products' => $categoryProducts,
-                    'colors' => $this->list_colors($categoryProducts),
-                    'sizes' => $this->list_sizes($categoryProducts),
+                    'colors' => $this->list_colors($Code),
+                    'sizes' => $this->list_sizes($Code),
                     'prices' => $this->list_prices($categoryProducts),
                     'offers' => $this->list_offers($Code),
                 ],

@@ -97,6 +97,7 @@ Route::prefix('v2')->group(function () {
     Route::get('/list-subcategories/{Code}', [WebSubCategories::class, 'index']);
     Route::get('/list-subcategory-products/{Code}', [WebSubCategories::class, 'listSubcategoryProducts']);
     Route::get('/show-product/{Code}', [WebProductController::class, 'showProduct']);
+    Route::get('/test', [WebProductController::class, 'test']);
     Route::get('/list-columns', [WebHomeController::class, 'getTableColumns']);
     Route::middleware('customerConfirm')->group(function () {
         Route::post('/submit-order', [OrderController::class, 'submit_order']);

@@ -386,7 +386,7 @@ class HomeController extends Controller
         try {
             $imageResults = ProductModel::where('CodeCompany', $this->active_company)
                 ->where('CShowInDevice', 1)
-                ->where('CFestival', 1)
+                ->where('CFestival', 0)
                 ->select('Pic', 'ImageCode', 'created_at', 'GCode', 'SCode', 'Code', 'PicName')
                 ->orderBy('UCode', 'ASC')
                 ->limit(16)
@@ -401,7 +401,9 @@ class HomeController extends Controller
                 }
             }
 
-            return ProductModel::with(['productSizeColor'])->where('CodeCompany', $this->active_company)
+            return ProductModel::with(['productSizeColor', 'productImages' => function ($query) {
+                $query->select('Code', 'PicName', 'Def', 'CodeKala');
+            }])->where('CodeCompany', $this->active_company)
                 ->where('CShowInDevice', 1)
                 ->select(
                     'CodeCompany',
@@ -432,7 +434,7 @@ class HomeController extends Controller
                     'KVahed',
                     'PicName'
                 )
-                ->where('CFestival', 1)
+                ->where('CFestival', 0)
                 ->orderBy('UCode', 'ASC')
                 ->limit(16)
                 ->get();

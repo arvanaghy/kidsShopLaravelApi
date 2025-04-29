@@ -276,7 +276,9 @@ class ProductController extends Controller
 
             $this->cleanupUnusedImages($product, $productImages);
 
-            $result = ProductModel::with(['productSizeColor', 'productImages' => function ($query) {
+            $result = ProductModel::with(['productSizeColor' => function ($query) {
+                $query->select('CodeKala', 'SizeNum', 'ColorCode', 'ColorName', 'Mande', 'Mablag');
+            }, 'productImages' => function ($query) {
                 $query->select('Code', 'PicName', 'Def', 'CodeKala');
             }])->where('Code', $Code)->select(
                 'CodeCompany',
@@ -317,6 +319,20 @@ class ProductController extends Controller
         } catch (Exception $e) {
             return response()->json(['error' => $e->getMessage()], 500);
         }
+    }
+
+    public function test()
+    {
+        // i want schema in AV_KalaSizeColorMande_View table
+        $columns = DB::select("SELECT COLUMN_NAME 
+                       FROM INFORMATION_SCHEMA.COLUMNS 
+                       WHERE TABLE_NAME = 'AV_KalaSizeColorMande_View'");
+
+        $columnNames = array_map(function ($column) {
+            return $column->COLUMN_NAME;
+        }, $columns);
+
+        return response()->json($columnNames);
     }
 
     public function listAllProducts(Request $request)
