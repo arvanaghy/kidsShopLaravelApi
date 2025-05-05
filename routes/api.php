@@ -96,6 +96,9 @@ Route::prefix('v2')->group(function () {
     Route::get('/list-categories', [WebCategoriesController::class, 'listCategories']);
     Route::get('/list-subcategories/{Code}', [WebSubCategories::class, 'index']);
     Route::get('/list-subcategory-products/{Code}', [WebSubCategories::class, 'listSubcategoryProducts']);
+    Route::get('/list-all-products/', [WebSubCategories::class, 'listAllProducts']);
+    Route::get('/list-all-offers/', [WebSubCategories::class, 'listAllOffers']);
+    Route::get('/list-best-seller/', [WebSubCategories::class, 'listBestSeller']);
     Route::get('/show-product/{Code}', [WebProductController::class, 'showProduct']);
     Route::get('/test', [WebProductController::class, 'test']);
     Route::get('/list-columns', [WebHomeController::class, 'getTableColumns']);

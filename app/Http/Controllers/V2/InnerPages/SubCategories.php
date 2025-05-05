@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\V2\InnerPages;
 
 use App\Http\Controllers\Controller;
+use App\Models\BestSellModel;
 use App\Models\CategoryModel;
 use Illuminate\Http\Request;
 use App\Models\ProductModel;
@@ -12,8 +13,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
 use Intervention\Image\ImageManagerStatic as Image;
 use Exception;
-
-
+use Illuminate\Support\Facades\Log;
 
 class SubCategories extends Controller
 {
@@ -307,21 +307,37 @@ class SubCategories extends Controller
                 $query->orderBy('Code', 'DESC');
             }
 
-            if ($search = $request->query('search') && $request->query('search') != '') {
+            $search = $request->query('search');
+            if ($request->has('search') && $request->query('search') != '') {
                 $query->where('Name', 'LIKE', "%{$search}%");
             }
-            if ($size = $request->query('size') && $request->query('size') != '') {
+
+            $size = $request->query('size');
+            if ($request->has('size') && $request->query('size') != '') {
                 $sizes = explode(',', $size);
                 $query->whereHas('productSizeColor', function ($query) use ($sizes) {
                     $query->whereIn('SizeNum', $sizes);
                 });
             }
-            if ($color = $request->query('color') && $request->query('color') != '') {
+
+            $color = $request->query('color');
+            if ($request->has('color') && $request->query('color') != '') {
                 $colors = explode(',', $color);
                 $query->whereHas('productSizeColor', function ($query) use ($colors) {
                     $query->whereIn('ColorCode', $colors);
                 });
             }
+
+            $min_price  = $request->query('min_price');
+            if ($request->has('min_price') && $request->query('min_price') != 0) {
+                $query->where('SPrice', '>=', (int)$min_price);
+            }
+            $max_price  = $request->query('max_price');
+            if ($request->has('max_price') && $request->query('max_price') != 100000000) {
+                $query->where('SPrice', '<=', (int)$max_price);
+            }
+
+
             $imageCreation = $query->select([
                 'Pic',
                 'ImageCode',
@@ -479,31 +495,312 @@ class SubCategories extends Controller
         }
     }
 
-    protected function list_colors($categoryCode)
+    protected function list_products()
     {
         try {
-            $products = ProductModel::with(['productSizeColor'])
-                ->where('CodeCompany', $this->active_company)
-                ->where('GCode', $categoryCode)
-                ->where('CShowInDevice', 1)
-                ->orderBy('Code', 'DESC')
-                ->get();
+            $request = request();
 
-            if (empty($products)) {
+            $query = ProductModel::with(['productSizeColor'])
+                ->where('CodeCompany', $this->active_company)
+                ->where('CShowInDevice', 1)
+                ->orderBy('Code', 'DESC');
+
+            if ($sortPrice = $request->query('sort_price')) {
+                $query->orderBy('SPrice', $sortPrice);
+            }
+
+            if ($search = $request->query('search')) {
+                $query->where('Name', 'LIKE', "%{$search}%");
+            }
+            if ($size = $request->query('size')) {
+                $sizes = explode(',', $size);
+                $query->whereHas('productSizeColor', function ($query) use ($sizes) {
+                    $query->whereIn('SizeNum', $sizes);
+                });
+            }
+            if ($color = $request->query('color')) {
+                $colors = explode(',', $color);
+                $query->whereHas('productSizeColor', function ($query) use ($colors) {
+                    $query->whereIn('ColorCode', $colors);
+                });
+            }
+
+            $imageCreation = $query->select([
+                'Pic',
+                'ImageCode',
+                'created_at',
+                'GCode',
+                'SCode',
+                'Code',
+                'CChangePic',
+                'PicName'
+            ])
+                ->paginate(24, ['*'], 'product_page');
+
+            foreach ($imageCreation as $image) {
+                if ($image->CChangePic == 1 && !empty($image->Pic)) {
+                    $createdAt = Carbon::parse($image->created_at);
+                    $picName = ceil($image->ImageCode) . "_" . $createdAt->getTimestamp();
+                    $this->CreateProductImages($image, $picName);
+                    DB::table('KalaImage')->where('Code', $image->ImageCode)->update(['PicName' => $picName]);
+                    DB::table('Kala')->where('Code', $image->Code)->update(['CChangePic' => 0]);
+                }
+            }
+
+            $productResult = $query->select([
+                'CodeCompany',
+                'CanSelect',
+                'GCode',
+                'GName',
+                'Comment',
+                'SCode',
+                'SName',
+                'Code',
+                'Name',
+                'Model',
+                'UCode',
+                'Vahed',
+                'KMegdar',
+                'KPrice',
+                'SPrice',
+                'KhordePrice',
+                'OmdePrice',
+                'HamkarPrice',
+                'AgsatPrice',
+                'CheckPrice',
+                'DForoosh',
+                'CShowInDevice',
+                'CFestival',
+                'GPoint',
+                'KVahed',
+                'PicName'
+            ])
+                ->paginate(24, ['*'], 'product_page');
+
+            $productResult->appends($request->query());
+
+            return $productResult;
+        } catch (Exception $e) {
+            return response()->json([
+                'message' => $e->getMessage(),
+                'result' => null
+            ], 500);
+        }
+    }
+    protected function list_offered_products()
+    {
+        try {
+            $request = request();
+
+            $query = ProductModel::with(['productSizeColor'])
+                ->where('CodeCompany', $this->active_company)
+                ->where('CShowInDevice', 1)
+                ->where('CFestival', 1)
+                ->orderBy('Code', 'DESC');
+
+            if ($sortPrice = $request->query('sort_price')) {
+                $query->orderBy('SPrice', $sortPrice);
+            }
+
+            if ($search = $request->query('search')) {
+                $query->where('Name', 'LIKE', "%{$search}%");
+            }
+            if ($size = $request->query('size')) {
+                $sizes = explode(',', $size);
+                $query->whereHas('productSizeColor', function ($query) use ($sizes) {
+                    $query->whereIn('SizeNum', $sizes);
+                });
+            }
+            if ($color = $request->query('color')) {
+                $colors = explode(',', $color);
+                $query->whereHas('productSizeColor', function ($query) use ($colors) {
+                    $query->whereIn('ColorCode', $colors);
+                });
+            }
+
+            $imageCreation = $query->select([
+                'Pic',
+                'ImageCode',
+                'created_at',
+                'GCode',
+                'SCode',
+                'Code',
+                'CChangePic',
+                'PicName'
+            ])
+                ->paginate(24, ['*'], 'product_page');
+
+            foreach ($imageCreation as $image) {
+                if ($image->CChangePic == 1 && !empty($image->Pic)) {
+                    $createdAt = Carbon::parse($image->created_at);
+                    $picName = ceil($image->ImageCode) . "_" . $createdAt->getTimestamp();
+                    $this->CreateProductImages($image, $picName);
+                    DB::table('KalaImage')->where('Code', $image->ImageCode)->update(['PicName' => $picName]);
+                    DB::table('Kala')->where('Code', $image->Code)->update(['CChangePic' => 0]);
+                }
+            }
+
+            $productResult = $query->select([
+                'CodeCompany',
+                'CanSelect',
+                'GCode',
+                'GName',
+                'Comment',
+                'SCode',
+                'SName',
+                'Code',
+                'Name',
+                'Model',
+                'UCode',
+                'Vahed',
+                'KMegdar',
+                'KPrice',
+                'SPrice',
+                'KhordePrice',
+                'OmdePrice',
+                'HamkarPrice',
+                'AgsatPrice',
+                'CheckPrice',
+                'DForoosh',
+                'CShowInDevice',
+                'CFestival',
+                'GPoint',
+                'KVahed',
+                'PicName'
+            ])
+                ->paginate(24, ['*'], 'product_page');
+
+            $productResult->appends($request->query());
+
+            return $productResult;
+        } catch (Exception $e) {
+            return response()->json([
+                'message' => $e->getMessage(),
+                'result' => null
+            ], 500);
+        }
+    }
+    protected function list_best_seller()
+    {
+        try {
+            $request = request();
+
+            $query = BestSellModel::with(['productSizeColor'])
+                ->where('CodeCompany', $this->active_company)
+                ->where('CShowInDevice', 1)
+                ->orderBy('KMegdar', 'DESC');
+
+            if ($sortPrice = $request->query('sort_price')) {
+                $query->orderBy('SPrice', $sortPrice);
+            }
+
+            if ($search = $request->query('search')) {
+                $query->where('Name', 'LIKE', "%{$search}%");
+            }
+            if ($size = $request->query('size')) {
+                $sizes = explode(',', $size);
+                $query->whereHas('productSizeColor', function ($query) use ($sizes) {
+                    $query->whereIn('SizeNum', $sizes);
+                });
+            }
+            if ($color = $request->query('color')) {
+                $colors = explode(',', $color);
+                $query->whereHas('productSizeColor', function ($query) use ($colors) {
+                    $query->whereIn('ColorCode', $colors);
+                });
+            }
+
+            $imageCreation = $query->select([
+
+                'Pic',
+                'KCode as Code',
+                'ImageCode',
+                'created_at',
+                'CChangePic',
+                'GCode',
+                'SGCode as SCode',
+                'PicName'
+            ])
+                ->paginate(24, ['*'], 'product_page');
+
+            foreach ($imageCreation as $image) {
+                if ($image->CChangePic == 1 && !empty($image->Pic)) {
+                    $createdAt = Carbon::parse($image->created_at);
+                    $picName = ceil($image->ImageCode) . "_" . $createdAt->getTimestamp();
+                    $this->CreateProductImages($image, $picName);
+                    DB::table('KalaImage')->where('Code', $image->ImageCode)->update(['PicName' => $picName]);
+                    DB::table('Kala')->where('Code', $image->Code)->update(['CChangePic' => 0]);
+                }
+            }
+
+            $productResult = $query->select([
+                'GCode',
+                'GName',
+                'SGCode as SCode',
+                'SGName as SName',
+                'KCode as Code',
+                'KName as Name',
+                'Vahed',
+                'Comment',
+                'KMegdar',
+                'SPrice',
+                'KhordePrice',
+                'OmdePrice',
+                'HamkarPrice',
+                'AgsatPrice',
+                'CheckPrice',
+                'DForoosh',
+                'CShowInDevice',
+                'GPoint',
+                'KVahed',
+                'PicName'
+            ])
+                ->paginate(24, ['*'], 'product_page');
+
+            $productResult->appends($request->query());
+
+            return $productResult;
+        } catch (Exception $e) {
+            return response()->json([
+                'message' => $e->getMessage(),
+                'result' => null
+            ], 500);
+        }
+    }
+
+    protected function list_colors($categoryCode, $mode)
+    {
+        try {
+
+            $query = ProductModel::where('CodeCompany', $this->active_company)
+                ->where('CShowInDevice', 1)
+                ->join('AV_KalaSizeColorMande_View', 'AV_KalaSizeColorMande_View.CodeKala', '=', 'AV_KalaList_View.Code')
+                ->where('AV_KalaSizeColorMande_View.ColorCode', '!=', null)
+                ->where('AV_KalaSizeColorMande_View.ColorName', '!=', null)
+                ->select('AV_KalaSizeColorMande_View.ColorCode', 'AV_KalaSizeColorMande_View.ColorName')
+                ->orderBy('Code', 'DESC');
+
+            if ($mode == 'category') {
+                $query->where('GCode', $categoryCode);
+            } elseif ($mode == 'subcategory') {
+                $query->where('SCode', $categoryCode);
+            } elseif ($mode == 'offers') {
+                $query->where('CFestival', 1);
+            }
+
+            $products = $query->get();
+
+            if ($products->isEmpty()) {
                 return [];
             }
 
             $colors = [];
             foreach ($products as $product) {
-                if ($product->productSizeColor && $product->productSizeColor->isNotEmpty()) {
-                    foreach ($product->productSizeColor as $sizeColor) {
-                        if (!is_null($sizeColor->ColorCode) && !is_null($sizeColor->ColorName)) {
-                            $colors[] = [
-                                'ColorCode' => $sizeColor->ColorCode,
-                                'ColorName' => $sizeColor->ColorName
-                            ];
-                        }
-                    }
+                if (!is_null($product->ColorCode) && !is_null($product->ColorName)) {
+                    $colors[] = [
+                        'ColorCode' => $product->ColorCode,
+                        'ColorName' => $product->ColorName
+                    ];
                 }
             }
 
@@ -522,28 +819,34 @@ class SubCategories extends Controller
         }
     }
 
-    protected function list_sizes($categoryCode)
+    protected function list_sizes($categoryCode, $mode)
     {
         try {
-            $products = ProductModel::with(['productSizeColor'])
-                ->where('CodeCompany', $this->active_company)
-                ->where('GCode', $categoryCode)
+            $query = ProductModel::where('CodeCompany', $this->active_company)
                 ->where('CShowInDevice', 1)
-                ->orderBy('Code', 'DESC')
-                ->get();
+                ->join('AV_KalaSizeColorMande_View', 'AV_KalaSizeColorMande_View.CodeKala', '=', 'AV_KalaList_View.Code')
+                ->where('AV_KalaSizeColorMande_View.SizeNum', '!=', null)
+                ->select('AV_KalaSizeColorMande_View.SizeNum')
+                ->orderBy('Code', 'DESC');
 
-            if (empty($products)) {
+            if ($mode == 'category') {
+                $query->where('GCode', $categoryCode);
+            } elseif ($mode == 'subcategory') {
+                $query->where('SCode', $categoryCode);
+            } elseif ($mode == 'offers') {
+                $query->where('CFestival', 1);
+            }
+
+            $products = $query->get();
+
+            if ($products->isEmpty()) {
                 return [];
             }
 
             $sizes = [];
             foreach ($products as $product) {
-                if ($product->productSizeColor && $product->productSizeColor->isNotEmpty()) {
-                    foreach ($product->productSizeColor as $sizeColor) {
-                        if (!is_null($sizeColor->SizeNum)) {
-                            $sizes[] = $sizeColor->SizeNum;
-                        }
-                    }
+                if (!is_null($product->SizeNum)) {
+                    $sizes[] = $product->SizeNum;
                 }
             }
 
@@ -551,8 +854,8 @@ class SubCategories extends Controller
                 return [];
             }
 
-            $uniqueSizes = array_values(array_unique($sizes));
-
+            $uniqueSizes = array_values(array_unique($sizes, SORT_REGULAR));
+            sort($uniqueSizes);
             return $uniqueSizes;
         } catch (Exception $e) {
             return response()->json([
@@ -600,75 +903,6 @@ class SubCategories extends Controller
         }
     }
 
-    protected function list_offers($categoryCode)
-    {
-        try {
-            $query = ProductModel::with(['productSizeColor'])->where('CodeCompany', $this->active_company)
-                ->where('GCode', $categoryCode)
-                ->where('CShowInDevice', 1)
-                ->where('CFestival', 1)
-                ->orderBy('Code', 'DESC');
-            $imageCreation = $query->select([
-                'Pic',
-                'ImageCode',
-                'created_at',
-                'GCode',
-                'SCode',
-                'Code',
-                'CChangePic',
-                'PicName'
-            ])->Limit(16)->get();
-            foreach ($imageCreation as $image) {
-                if ($image->CChangePic == 1) {
-                    $this->removeProductImages($image);
-                }
-                if (!empty($image->Pic)) {
-                    $this->CreateProductPath($image);
-                    $createdAt = Carbon::parse($image->created_at);
-                    $picName = ceil($image->ImageCode) . "_" . $createdAt->getTimestamp();
-                    $this->CreateProductImages($image, $picName);
-                    DB::table('KalaImage')->where('Code', $image->ImageCode)->update(['PicName' => $picName]);
-                }
-                DB::table('Kala')->where('Code', $image->Code)->update(['CChangePic' => 0]);
-            }
-
-            $offersResult = $query->select([
-                'CodeCompany',
-                'CanSelect',
-                'GCode',
-                'GName',
-                'Comment',
-                'SCode',
-                'SName',
-                'Code',
-                'Name',
-                'Model',
-                'UCode',
-                'Vahed',
-                'KMegdar',
-                'KPrice',
-                'SPrice',
-                'KhordePrice',
-                'OmdePrice',
-                'HamkarPrice',
-                'AgsatPrice',
-                'CheckPrice',
-                'DForoosh',
-                'CShowInDevice',
-                'CFestival',
-                'GPoint',
-                'KVahed',
-                'PicName'
-            ])->limit(16)->get();
-            return  $offersResult;
-        } catch (Exception $e) {
-            return response()->json([
-                'message' => $e->getMessage(),
-                'result' => null
-            ]);
-        }
-    }
-
     public function index(Request $request, $Code)
     {
         try {
@@ -699,10 +933,9 @@ class SubCategories extends Controller
                     'subcategories' => $subcategories,
                     'category' => $category,
                     'products' => $categoryProducts,
-                    'colors' => $this->list_colors($Code),
-                    'sizes' => $this->list_sizes($Code),
+                    'colors' => $this->list_colors($Code, 'category'),
+                    'sizes' => $this->list_sizes($Code, 'category'),
                     'prices' => $this->list_prices($categoryProducts),
-                    'offers' => $this->list_offers($Code),
                 ],
                 'message' => 'دریافت اطلاعات با موفقیت انجام شد'
             ], 200);
@@ -734,10 +967,92 @@ class SubCategories extends Controller
                 'result' => [
                     'subcategory' => $subcategory,
                     'products' => $subcategoryProducts,
-                    'colors' => $this->list_colors($subcategoryProducts),
-                    'sizes' => $this->list_sizes($subcategoryProducts),
+                    'colors' => $this->list_colors($Code, 'subcategory'),
+                    'sizes' => $this->list_sizes($Code, 'subcategory'),
                     'prices' => $this->list_prices($subcategoryProducts),
-                    'offers' => $this->list_offers($Code),
+                ],
+                'message' => 'دریافت اطلاعات با موفقیت انجام شد'
+            ], 200);
+        } catch (Exception $e) {
+            return response()->json([
+                'status' => false,
+                'message' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function listAllProducts(Request $request)
+    {
+        try {
+            $productPage = $request->query('product_page', 1);
+
+            $allProducts = $this->list_products();
+            if ($allProducts instanceof \Illuminate\Http\JsonResponse) {
+                return $allProducts;
+            }
+            $allProducts->appends(['product_page' => $productPage]);
+
+            return response()->json([
+                'result' => [
+                    'products' => $allProducts,
+                    'colors' => $this->list_colors('0', 'all'),
+                    'sizes' => $this->list_sizes('0', 'all'),
+                    'prices' => $this->list_prices($allProducts),
+                ],
+                'message' => 'دریافت اطلاعات با موفقیت انجام شد'
+            ], 200);
+        } catch (Exception $e) {
+            return response()->json([
+                'status' => false,
+                'message' => $e->getMessage()
+            ], 500);
+        }
+    }
+    public function listAllOffers(Request $request)
+    {
+        try {
+            $productPage = $request->query('product_page', 1);
+
+            $products = $this->list_products();
+            if ($products instanceof \Illuminate\Http\JsonResponse) {
+                return $products;
+            }
+            $products->appends(['product_page' => $productPage]);
+
+            return response()->json([
+                'result' => [
+                    'products' => $products,
+                    'colors' => $this->list_colors('offers', 'all'),
+                    'sizes' => $this->list_sizes('offers', 'all'),
+                    'prices' => $this->list_prices($products),
+                ],
+                'message' => 'دریافت اطلاعات با موفقیت انجام شد'
+            ], 200);
+        } catch (Exception $e) {
+            return response()->json([
+                'status' => false,
+                'message' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function listBestSeller(Request $request)
+    {
+        try {
+            $productPage = $request->query('product_page', 1);
+
+            $products = $this->list_best_seller();
+            if ($products instanceof \Illuminate\Http\JsonResponse) {
+                return $products;
+            }
+            $products->appends(['product_page' => $productPage]);
+
+            return response()->json([
+                'result' => [
+                    'products' => $products,
+                    'colors' => $this->list_colors('best-seller', 'all'),
+                    'sizes' => $this->list_sizes('best-seller', 'all'),
+                    'prices' => $this->list_prices($products),
                 ],
                 'message' => 'دریافت اطلاعات با موفقیت انجام شد'
             ], 200);
