@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\V2\InnerPages;
 
 use App\Http\Controllers\Controller;
+use App\Models\BestSellModel;
 use App\Models\CategoryModel;
 use Illuminate\Http\Request;
 use App\Models\ProductModel;
@@ -11,7 +12,7 @@ use Illuminate\Support\Facades\File;
 use Intervention\Image\ImageManagerStatic as Image;
 use Exception;
 use Carbon\Carbon;
-
+use Illuminate\Support\Facades\Log;
 
 class HomeController extends Controller
 {
@@ -236,107 +237,85 @@ class HomeController extends Controller
         }
     }
 
-    protected function CreateProductImages($data, $picName)
-    {
-
-        $GCodePathOriginal = public_path('products-image/original/' . ceil($data->GCode));
-        if (!File::isDirectory($GCodePathOriginal)) {
-            File::makeDirectory($GCodePathOriginal, 0755, true, true);
-        }
-
-        $SCodePathOriginal = public_path('products-image/original/' . ceil($data->GCode) . '/' . ceil($data->SCode));
-        if (!File::isDirectory($SCodePathOriginal)) {
-            File::makeDirectory($SCodePathOriginal, 0755, true, true);
-        }
-
-        $GCodePathWebp = public_path('products-image/webp/' . ceil($data->GCode));
-        if (!File::isDirectory($GCodePathWebp)) {
-            File::makeDirectory($GCodePathWebp, 0755, true, true);
-        }
-
-        $SCodePathWebp = public_path('products-image/webp/' . ceil($data->GCode) . '/' . ceil($data->SCode));
-        if (!File::isDirectory($SCodePathWebp)) {
-            File::makeDirectory($SCodePathWebp, 0755, true, true);
-        }
-
-        $dir = "products-image/original/" . ceil($data->GCode) . "/" . ceil($data->SCode);
-        $webpDir = "products-image/webp/" . ceil($data->GCode) . "/" . ceil($data->SCode);
-
-        $imagePath = "$dir/$picName.jpg";
-        $webpPath = "$webpDir/$picName.webp";
-
-        File::put(public_path($imagePath), $data->Pic);
-        Image::configure(['driver' => 'gd']);
-
-        $image = Image::make(public_path($imagePath));
-        $image->encode('webp', 100)->resize(250, 250)->save(public_path($webpPath), 100);
-
-        File::delete(public_path($imagePath));
-    }
-
-    public function getTableColumns()
+    public function resetCChangePic()
     {
         try {
-            $tableName = (new ProductModel)->getTable();
-
-            // Query INFORMATION_SCHEMA.COLUMNS for SQL Server
-            $columns = DB::select("
-                SELECT 
-                    COLUMN_NAME AS Field,
-                    DATA_TYPE AS Type,
-                    IS_NULLABLE AS Nullable,
-                    COLUMN_DEFAULT AS DefaultValue
-                FROM INFORMATION_SCHEMA.COLUMNS 
-                WHERE TABLE_NAME = ?
-            ", [$tableName]);
-
-            // Format the response
-            $columnDetails = array_map(function ($column) {
-                return [
-                    'name' => $column->Field,
-                    'type' => $column->Type,
-                    'nullable' => $column->Nullable === 'YES',
-                    'default' => $column->DefaultValue,
-                    'key' => null, // SQL Server doesn't provide key info directly here; requires separate query if needed
-                ];
-            }, $columns);
-
-            return response()->json($columnDetails);
-        } catch (\Exception $e) {
+            $update = DB::table('Kala')->where('CodeCompany', $this->active_company)->update(['CChangePic' => 1]);
             return response()->json([
-                'error' => 'Unable to fetch table columns',
-                'message' => $e->getMessage()
-            ], 500);
+                'result' =>
+                [
+                    'message' => 'CChangePic updated successfully',
+                    'rowsEffectedCount' => $update,
+                ]
+            ], 200);
+        } catch (Exception $e) {
+            return response()->json([
+                'result' => null,
+                'message' => $e->getMessage(),
+            ], 503);
+        }
+    }
+
+    protected function createProductImages($data, $picName): bool
+    {
+        try {
+            $imagePath = public_path("products-image/original/{$picName}.jpg");
+            $webpPath = public_path("products-image/webp/{$picName}.webp");
+
+            File::put($imagePath, $data->Pic);
+
+            Image::configure(['driver' => 'gd']);
+            Image::make($imagePath)
+                ->encode('webp', 100)
+                ->resize(250, 250, function ($constraint) {
+                    $constraint->aspectRatio();
+                    $constraint->upsize();
+                })
+                ->save($webpPath);
+
+            File::delete($imagePath);
+
+            return true;
+        } catch (Exception $e) {
+            Log::error("Failed to create product image: {$e->getMessage()}");
+            return false;
         }
     }
 
     protected function fetchNewestProducts()
     {
         try {
-            $imageResults = ProductModel::where('CodeCompany', $this->active_company)
+            $products = ProductModel::query()
+                ->where('CodeCompany', $this->active_company)
                 ->where('CShowInDevice', 1)
-                ->select(
-                    'Pic',
+                ->select([
                     'Code',
-                    'created_at',
-                    'GCode',
                     'ImageCode',
-                    'SCode',
-                    'Code',
-                    'PicName'
-                )
+                    'Pic',
+                    'CChangePic',
+                    'created_at',
+                ])
                 ->orderBy('UCode', 'ASC')
                 ->limit(16)
                 ->get();
 
-            foreach ($imageResults as $image) {
-                if ($image->CChangePic == 1 && !empty($image->Pic)) {
-                    $picName = ceil($image->ImageCode) . "_" . $image->created_at->getTimestamp();
-                    $this->CreateProductImages($image, $picName);
-                    DB::table('KalaImage')->where('Code', $image->ImageCode)->update(['PicName' => $picName]);
-                    DB::table('Kala')->where('Code', $image->Code)->update(['CChangePic' => 0]);
+            DB::transaction(function () use ($products) {
+                foreach ($products as $product) {
+                    if ($product->CChangePic == 1 && !empty($product->Pic)) {
+                        $picName = "{$product->ImageCode}_{$product->created_at->timestamp}";
+
+                        if ($this->createProductImages($product, $picName)) {
+                            DB::table('KalaImage')
+                                ->where('Code', $product->ImageCode)
+                                ->update(['PicName' => $picName]);
+
+                            DB::table('Kala')
+                                ->where('Code', $product->Code)
+                                ->update(['CChangePic' => 0]);
+                        }
+                    }
                 }
-            }
+            });
 
             return ProductModel::with(['productSizeColor'])->where('CodeCompany', $this->active_company)
                 ->where('CShowInDevice', 1)
@@ -384,22 +363,39 @@ class HomeController extends Controller
     {
 
         try {
-            $imageResults = ProductModel::where('CodeCompany', $this->active_company)
-                ->where('CShowInDevice', 1)
-                ->where('CFestival', 0)
-                ->select('Pic', 'ImageCode', 'created_at', 'GCode', 'SCode', 'Code', 'PicName')
-                ->orderBy('UCode', 'ASC')
-                ->limit(16)
-                ->get();
 
-            foreach ($imageResults as $image) {
-                if ($image->CChangePic == 1 && !empty($image->Pic)) {
-                    $picName = ceil($image->ImageCode) . "_" . $image->created_at->getTimestamp();
-                    $this->CreateProductImages($image, $picName);
-                    DB::table('KalaImage')->where('Code', $image->ImageCode)->update(['PicName' => $picName]);
-                    DB::table('Kala')->where('Code', $image->Code)->update(['CChangePic' => 0]);
+            $products = ProductModel::query()
+            ->where('CodeCompany', $this->active_company)
+            ->where('CFestival', 0)
+            ->where('CShowInDevice', 1)
+            ->select([
+                'Code',
+                'ImageCode',
+                'Pic',
+                'CChangePic',
+                'created_at',
+            ])
+            ->orderBy('UCode', 'ASC')
+            ->limit(16)
+            ->get();
+     
+            DB::transaction(function () use ($products) {
+                foreach ($products as $product) {
+                    if ($product->CChangePic == 1 && !empty($product->Pic)) {
+                        $picName = "{$product->ImageCode}_{$product->created_at->timestamp}";
+
+                        if ($this->createProductImages($product, $picName)) {
+                            DB::table('KalaImage')
+                                ->where('Code', $product->ImageCode)
+                                ->update(['PicName' => $picName]);
+
+                            DB::table('Kala')
+                                ->where('Code', $product->Code)
+                                ->update(['CChangePic' => 0]);
+                        }
+                    }
                 }
-            }
+            });
 
             return ProductModel::with(['productSizeColor', 'productImages' => function ($query) {
                 $query->select('Code', 'PicName', 'Def', 'CodeKala');
@@ -449,23 +445,32 @@ class HomeController extends Controller
     protected function bestSeller()
     {
         try {
-            $imageResults = DB::table('AV_KalaTedadForooshKol_View')->select('Pic', 'KCode as Code', 'ImageCode', 'created_at', 'CChangePic', 'GCode', 'SGCode as SCode', 'PicName')
+
+            $products = BestSellModel::query()->select('Pic', 'KCode as Code', 'ImageCode', 'created_at', 'CChangePic', 'PicName')
                 ->where('CShowInDevice', 1)
                 ->where('CodeCompany', $this->active_company)
                 ->limit(16)
                 ->get();
 
-            foreach ($imageResults as $image) {
-                if ($image->CChangePic == 1 && !empty($image->Pic)) {
-                    $createdAt = Carbon::parse($image->created_at);
-                    $picName = ceil($image->ImageCode) . "_" . $createdAt->getTimestamp();
-                    $this->CreateProductImages($image, $picName);
-                    DB::table('KalaImage')->where('Code', $image->ImageCode)->update(['PicName' => $picName]);
-                    DB::table('Kala')->where('Code', $image->Code)->update(['CChangePic' => 0]);
-                }
-            }
+                DB::transaction(function () use ($products) {
+                    foreach ($products as $product) {
+                        if ($product->CChangePic == 1 && !empty($product->Pic)) {
+                            $picName = "{$product->ImageCode}_{$product->created_at->timestamp}";
+    
+                            if ($this->createProductImages($product, $picName)) {
+                                DB::table('KalaImage')
+                                    ->where('Code', $product->ImageCode)
+                                    ->update(['PicName' => $picName]);
+    
+                                DB::table('Kala')
+                                    ->where('Code', $product->Code)
+                                    ->update(['CChangePic' => 0]);
+                            }
+                        }
+                    }
+                });
 
-            return  DB::table('AV_KalaTedadForooshKol_View')->select(
+            return  BestSellModel::select(
                 'GCode',
                 'GName',
                 'SGCode as SCode',

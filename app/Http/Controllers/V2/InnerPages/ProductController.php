@@ -276,9 +276,7 @@ class ProductController extends Controller
 
             $this->cleanupUnusedImages($product, $productImages);
 
-            $result = ProductModel::with(['productSizeColor' => function ($query) {
-                $query->select('CodeKala', 'SizeNum', 'ColorCode', 'ColorName', 'Mande', 'Mablag');
-            }, 'productImages' => function ($query) {
+            $result = ProductModel::with(['productSizeColor', 'productImages' => function ($query) {
                 $query->select('Code', 'PicName', 'Def', 'CodeKala');
             }])->where('Code', $Code)->select(
                 'CodeCompany',

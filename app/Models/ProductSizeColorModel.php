@@ -13,6 +13,7 @@ class ProductSizeColorModel extends Model
     public $timestamps = false;
 
     protected $fillable = [
+        'CSCode',
         'CodeKala',
         'SizeNum',
         'ColorCode',

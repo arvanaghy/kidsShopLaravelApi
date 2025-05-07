@@ -93,6 +93,7 @@ Route::prefix('v1')->group(function () {
 Route::prefix('v2')->group(function () {
     Route::get('/top-menu', [WebGeneralController::class, 'topMenu']);
     Route::get('/home-page', [WebHomeController::class, 'homePage']);
+    Route::get('/reset-images', [WebHomeController::class, 'resetCChangePic']);
     Route::get('/list-categories', [WebCategoriesController::class, 'listCategories']);
     Route::get('/list-subcategories/{Code}', [WebSubCategories::class, 'index']);
     Route::get('/list-subcategory-products/{Code}', [WebSubCategories::class, 'listSubcategoryProducts']);
@@ -101,8 +102,8 @@ Route::prefix('v2')->group(function () {
     Route::get('/list-best-seller/', [WebSubCategories::class, 'listBestSeller']);
     Route::get('/show-product/{Code}', [WebProductController::class, 'showProduct']);
     Route::get('/test', [WebProductController::class, 'test']);
-    Route::get('/list-columns', [WebHomeController::class, 'getTableColumns']);
+
     Route::middleware('customerConfirm')->group(function () {
-        Route::post('/submit-order', [OrderController::class, 'submit_order']);
+        Route::post('/submit-order', [WebOrderController::class, 'submit_order']);
     });
 });

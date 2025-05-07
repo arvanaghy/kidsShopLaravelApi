@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\OrderModel;
 use Illuminate\Http\Request;
 use App\Models\CustomerModel;
+use App\Models\ProductModel;
 use Illuminate\Support\Facades\DB;
 use Exception;
 
@@ -50,7 +51,7 @@ class OrderController extends Controller
             $token = $request->bearerToken();
             if (!$token or $token == "") {
                 return response()->json([
-                    "message" => "Token نامعتبر ا��ت",
+                    "message" => "Token نامعتبر میباشد",
                     "result" => null,
                 ], 505);
             }
@@ -74,7 +75,7 @@ class OrderController extends Controller
 
             if (!$insertion) {
                 return response()->json([
-                    "message" => "خطا در ��بت سفارش",
+                    "message" => "خطا در ثبت سفارش",
                     "result" => null,
                 ], 500);
             }
@@ -82,43 +83,30 @@ class OrderController extends Controller
             if ($insertion) {
                 $result = OrderModel::where('CCode', $userResult->Code)->where('CodeDoreMali', $this->financial_period)->orderBy('Code', 'DESC')->first();
                 $total_price = 0;
-                foreach ($request['products'] as $value) {
-                    $product = DB::table('Kala')->select('KMegdar', 'SPrice', 'KhordePrice', 'OmdePrice', 'HamkarPrice', 'AgsatPrice', 'CheckPrice')->where('Code', $value['KCode'])->first();
-                    $price = 0;
-                    switch ($userResult->ForooshType) {
-                        case '0':
-                            $price = $product->SPrice;
-                            break;
-                        case '1':
-                            $price = $product->KhordePrice;
-                            break;
-                        case '2':
-                            $price = $product->OmdePrice;
-                            break;
-                        case '3':
-                            $price = $product->AgsatPrice;
-                            break;
-                        case '4':
-                            $price = $product->CheckPrice;
-                            break;
-                        default:
-                            $price = $product->KhordePrice;
-                            break;
+                foreach ($request['products'] as $productValue) {
+                    $product = ProductModel::with(['productSizeColor'])->select('Code')->where('Code', $productValue['KCode'])->first();
+                    if (!$product) {
+                        return response()->json([
+                            "message" => "کالا یافت نشد",
+                            "result" => null,
+                        ], 404);
                     }
 
-                    DB::table('SOrderKala')->insert([
-                        'SCode' => $result->Code,
-                        'KCode' => $value['KCode'],
-                        'Tedad' => $value['Tedad'],
-                        'Fee' => $price,
-                        'KTedad' => $value['KTedad'],
-                        'KMegdar' => $product->KMegdar,
-                        'KFee' => $price * $product->KMegdar,
-                        'DTakhfif' => 0,
-                        'MTakhfif' => 0,
-                        'SizeNum' => $value['SizeNum'],
-                        'ColorCode' => $value['ColorCode'],
-                    ]);
+                    foreach ($productValue['basket'] as $basketValue) {
+                        DB::table('SOrderKala')->insert([
+                            'SCode' => $result->Code,
+                            'KCode' => $productValue['KCode'],
+                            'Tedad' => $basketValue['quantity'],
+                            'Fee' => $basketValue['feature']['Mablaq'],
+                            'KTedad' => 0,
+                            'KMegdar' => 0,
+                            'KFee' => 0,
+                            'DTakhfif' => 0,
+                            'MTakhfif' => 0,
+                            'SizeNum' => $basketValue['feature']['SizeNum'],
+                            'ColorCode' => $basketValue['feature']['ColorCode'],
+                        ]);
+                    }
                 }
 
                 $Sorder  = DB::table('AV_SOrder_View')->where('Code', $result->Code)->first();
@@ -126,7 +114,7 @@ class OrderController extends Controller
                 $client_text_message = "مشتری گرامی " . $userResult->Name . " پیش فاکتور " . $result->Code . " به مبلغ " . $Sorder->JamKol . " در سیستم ثبت گردید. با تشکر کیدزشاپ";
                 $this->send_sms_via_webone($userResult->Mobile, $client_text_message);
                 $admin_text_message = "پیش فاکتور جدید به شماره " . $result->Code . " به مبلغ " . $Sorder->JamKol .  "برای کاربر" . $userResult->Name .  " در سیستم ثبت گردید.";
-                $this->send_sms_via_webone('09354662900', $admin_text_message);
+                // $this->send_sms_via_webone('09354662900', $admin_text_message);
 
                 return response()->json([
                     'message' => 'پیش فاکتور با موفقیت ثبت شد',

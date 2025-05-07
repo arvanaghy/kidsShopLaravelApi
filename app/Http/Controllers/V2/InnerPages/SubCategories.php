@@ -865,6 +865,89 @@ class SubCategories extends Controller
         }
     }
 
+    protected function list_colors_best_seller($categoryCode, $mode)
+    {
+        try {
+
+            $query = BestSellModel::where('CodeCompany', $this->active_company)
+                ->where('CShowInDevice', 1)
+                ->join('AV_KalaSizeColorMande_View', 'AV_KalaSizeColorMande_View.CodeKala', '=', 'AV_KalaTedadForooshKol_View.KCode')
+                ->where('AV_KalaSizeColorMande_View.ColorCode', '!=', null)
+                ->where('AV_KalaSizeColorMande_View.ColorName', '!=', null)
+                ->select('AV_KalaSizeColorMande_View.ColorCode', 'AV_KalaSizeColorMande_View.ColorName')
+                ->orderBy('KMegdar', 'DESC');
+
+
+
+            $products = $query->get();
+
+            if ($products->isEmpty()) {
+                return [];
+            }
+
+            $colors = [];
+            foreach ($products as $product) {
+                if (!is_null($product->ColorCode) && !is_null($product->ColorName)) {
+                    $colors[] = [
+                        'ColorCode' => $product->ColorCode,
+                        'ColorName' => $product->ColorName
+                    ];
+                }
+            }
+
+            if (empty($colors)) {
+                return [];
+            }
+
+            $uniqueColors = array_values(array_unique($colors, SORT_REGULAR));
+
+            return $uniqueColors;
+        } catch (Exception $e) {
+            return response()->json([
+                'message' => $e->getMessage(),
+                'result' => null
+            ], 500);
+        }
+    }
+
+    protected function list_sizes_best_seller($categoryCode, $mode)
+    {
+        try {
+            $query = ProductModel::where('CodeCompany', $this->active_company)
+                ->where('CShowInDevice', 1)
+                ->join('AV_KalaSizeColorMande_View', 'AV_KalaSizeColorMande_View.CodeKala', '=', 'AV_KalaTedadForooshKol_View.KCode')
+                ->where('AV_KalaSizeColorMande_View.SizeNum', '!=', null)
+                ->select('AV_KalaSizeColorMande_View.SizeNum')
+                ->orderBy('KMegdar', 'DESC');
+
+            $products = $query->get();
+
+            if ($products->isEmpty()) {
+                return [];
+            }
+
+            $sizes = [];
+            foreach ($products as $product) {
+                if (!is_null($product->SizeNum)) {
+                    $sizes[] = $product->SizeNum;
+                }
+            }
+
+            if (empty($sizes)) {
+                return [];
+            }
+
+            $uniqueSizes = array_values(array_unique($sizes, SORT_REGULAR));
+            sort($uniqueSizes);
+            return $uniqueSizes;
+        } catch (Exception $e) {
+            return response()->json([
+                'message' => $e->getMessage(),
+                'result' => null
+            ], 500);
+        }
+    }
+
     protected function list_prices($resultProducts)
     {
         try {
@@ -925,8 +1008,6 @@ class SubCategories extends Controller
             if ($category instanceof \Illuminate\Http\JsonResponse) {
                 return $category;
             }
-
-
 
             return response()->json([
                 'result' => [
@@ -1050,8 +1131,8 @@ class SubCategories extends Controller
             return response()->json([
                 'result' => [
                     'products' => $products,
-                    'colors' => $this->list_colors('best-seller', 'all'),
-                    'sizes' => $this->list_sizes('best-seller', 'all'),
+                    'colors' => $this->list_colors_best_seller('best-seller', 'all'),
+                    'sizes' => $this->list_sizes_best_seller('best-seller', 'all'),
                     'prices' => $this->list_prices($products),
                 ],
                 'message' => 'دریافت اطلاعات با موفقیت انجام شد'
