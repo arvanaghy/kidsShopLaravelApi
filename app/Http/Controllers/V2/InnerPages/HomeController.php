@@ -128,7 +128,10 @@ class HomeController extends Controller
         File::put($imagePath, $data->Pic);
 
         Image::configure(['driver' => 'gd']);
-        Image::make($imagePath)->encode('webp', 100)->resize(250, 250)->save($webpPath);
+        Image::make($imagePath)->encode('webp', 100)->resize(250, 250, function ($constraint) {
+            $constraint->aspectRatio();
+            $constraint->upsize();
+        })->save($webpPath);
 
         File::delete($imagePath);
     }
@@ -148,7 +151,10 @@ class HomeController extends Controller
             Image::configure(['driver' => 'gd']);
             Image::make($imagePath)
                 ->encode('webp', 100)
-                ->resize($size[0], $size[1])
+                ->resize($size[0], $size[1], function ($constraint) {
+                    $constraint->aspectRatio();
+                    $constraint->upsize();
+                })
                 ->save($webpPath, 100);
 
             File::delete($imagePath);
@@ -302,7 +308,8 @@ class HomeController extends Controller
             DB::transaction(function () use ($products) {
                 foreach ($products as $product) {
                     if ($product->CChangePic == 1 && !empty($product->Pic)) {
-                        $picName = "{$product->ImageCode}_{$product->created_at->timestamp}";
+                        $createdAt = Carbon::parse($product->created_at);
+                        $picName = "{$product->ImageCode}_{$createdAt->getTimestamp()}";
 
                         if ($this->createProductImages($product, $picName)) {
                             DB::table('KalaImage')
@@ -365,24 +372,25 @@ class HomeController extends Controller
         try {
 
             $products = ProductModel::query()
-            ->where('CodeCompany', $this->active_company)
-            ->where('CFestival', 0)
-            ->where('CShowInDevice', 1)
-            ->select([
-                'Code',
-                'ImageCode',
-                'Pic',
-                'CChangePic',
-                'created_at',
-            ])
-            ->orderBy('UCode', 'ASC')
-            ->limit(16)
-            ->get();
-     
+                ->where('CodeCompany', $this->active_company)
+                ->where('CFestival', 0)
+                ->where('CShowInDevice', 1)
+                ->select([
+                    'Code',
+                    'ImageCode',
+                    'Pic',
+                    'CChangePic',
+                    'created_at',
+                ])
+                ->orderBy('UCode', 'ASC')
+                ->limit(16)
+                ->get();
+
             DB::transaction(function () use ($products) {
                 foreach ($products as $product) {
                     if ($product->CChangePic == 1 && !empty($product->Pic)) {
-                        $picName = "{$product->ImageCode}_{$product->created_at->timestamp}";
+                        $createdAt = Carbon::parse($product->created_at);
+                        $picName = "{$product->ImageCode}_{$createdAt->getTimestamp()}";
 
                         if ($this->createProductImages($product, $picName)) {
                             DB::table('KalaImage')
@@ -452,25 +460,26 @@ class HomeController extends Controller
                 ->limit(16)
                 ->get();
 
-                DB::transaction(function () use ($products) {
-                    foreach ($products as $product) {
-                        if ($product->CChangePic == 1 && !empty($product->Pic)) {
-                            $picName = "{$product->ImageCode}_{$product->created_at->timestamp}";
-    
-                            if ($this->createProductImages($product, $picName)) {
-                                DB::table('KalaImage')
-                                    ->where('Code', $product->ImageCode)
-                                    ->update(['PicName' => $picName]);
-    
-                                DB::table('Kala')
-                                    ->where('Code', $product->Code)
-                                    ->update(['CChangePic' => 0]);
-                            }
+            DB::transaction(function () use ($products) {
+                foreach ($products as $product) {
+                    if ($product->CChangePic == 1 && !empty($product->Pic)) {
+                        $createdAt = Carbon::parse($product->created_at);
+                        $picName = "{$product->ImageCode}_{$createdAt->getTimestamp()}";
+
+                        if ($this->createProductImages($product, $picName)) {
+                            DB::table('KalaImage')
+                                ->where('Code', $product->ImageCode)
+                                ->update(['PicName' => $picName]);
+
+                            DB::table('Kala')
+                                ->where('Code', $product->Code)
+                                ->update(['CChangePic' => 0]);
                         }
                     }
-                });
+                }
+            });
 
-            return  BestSellModel::select(
+            return  BestSellModel::with(['productSizeColor'])->select(
                 'GCode',
                 'GName',
                 'SGCode as SCode',

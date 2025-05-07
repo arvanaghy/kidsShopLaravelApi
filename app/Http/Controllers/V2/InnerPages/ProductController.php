@@ -10,6 +10,7 @@ use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Log;
 use Intervention\Image\ImageManagerStatic as Image;
 
 
@@ -56,42 +57,30 @@ class ProductController extends Controller
         }
     }
 
-    protected function CreateProductImages($data, $picName)
+    protected function createProductImages($data, $picName): bool
     {
+        try {
+            $imagePath = public_path("products-image/original/{$picName}.jpg");
+            $webpPath = public_path("products-image/webp/{$picName}.webp");
 
-        $GCodePathOriginal = public_path('products-image/original/' . ceil($data->GCode));
-        if (!File::isDirectory($GCodePathOriginal)) {
-            File::makeDirectory($GCodePathOriginal, 0755, true, true);
+            File::put($imagePath, $data->Pic);
+
+            Image::configure(['driver' => 'gd']);
+            Image::make($imagePath)
+                ->encode('webp', 100)
+                ->resize(250, 250, function ($constraint) {
+                    $constraint->aspectRatio();
+                    $constraint->upsize();
+                })
+                ->save($webpPath);
+
+            File::delete($imagePath);
+
+            return true;
+        } catch (Exception $e) {
+            Log::error("Failed to create product image: {$e->getMessage()}");
+            return false;
         }
-
-        $SCodePathOriginal = public_path('products-image/original/' . ceil($data->GCode) . '/' . ceil($data->SCode));
-        if (!File::isDirectory($SCodePathOriginal)) {
-            File::makeDirectory($SCodePathOriginal, 0755, true, true);
-        }
-
-        $GCodePathWebp = public_path('products-image/webp/' . ceil($data->GCode));
-        if (!File::isDirectory($GCodePathWebp)) {
-            File::makeDirectory($GCodePathWebp, 0755, true, true);
-        }
-
-        $SCodePathWebp = public_path('products-image/webp/' . ceil($data->GCode) . '/' . ceil($data->SCode));
-        if (!File::isDirectory($SCodePathWebp)) {
-            File::makeDirectory($SCodePathWebp, 0755, true, true);
-        }
-
-        $dir = "products-image/original/" . ceil($data->GCode) . "/" . ceil($data->SCode);
-        $webpDir = "products-image/webp/" . ceil($data->GCode) . "/" . ceil($data->SCode);
-
-        $imagePath = "$dir/$picName.jpg";
-        $webpPath = "$webpDir/$picName.webp";
-
-        File::put(public_path($imagePath), $data->Pic);
-        Image::configure(['driver' => 'gd']);
-
-        $image = Image::make(public_path($imagePath));
-        $image->encode('webp', 100)->resize(250, 250)->save(public_path($webpPath), 100);
-
-        File::delete(public_path($imagePath));
     }
 
     protected function cleanupUnusedImages($product, $productImages)
@@ -263,8 +252,6 @@ class ProductController extends Controller
 
             foreach ($productImages as $image) {
                 if (!empty($image->Pic) && !empty($image->PicName)) {
-                    $image->GCode = $product->GCode;
-                    $image->SCode = $product->SCode;
                     $createdAt = Carbon::parse($image->created_at);
                     $picName = ceil($image->Code) . "_" . $createdAt->getTimestamp();
                     $this->CreateProductImages($image, $picName);
@@ -274,7 +261,7 @@ class ProductController extends Controller
 
             DB::table('Kala')->where('Code', $product->Code)->update(['CChangePic' => 0]);
 
-            $this->cleanupUnusedImages($product, $productImages);
+            // $this->cleanupUnusedImages($product, $productImages);
 
             $result = ProductModel::with(['productSizeColor', 'productImages' => function ($query) {
                 $query->select('Code', 'PicName', 'Def', 'CodeKala');

@@ -76,7 +76,10 @@ class GeneralController extends Controller
         File::put($imagePath, $data->Pic);
 
         Image::configure(['driver' => 'gd']);
-        Image::make($imagePath)->encode('webp', 100)->resize(250, 250)->save($webpPath);
+        Image::make($imagePath)->encode('webp', 100)->resize(250, 250, function ($constraint) {
+            $constraint->aspectRatio();
+            $constraint->upsize();
+        })->save($webpPath);
 
         File::delete($imagePath);
     }
@@ -87,7 +90,7 @@ class GeneralController extends Controller
             $categotyImageCreation = CategoryModel::select('Pic', 'Code', 'CChangePic', 'PicName')
                 ->where('CodeCompany', $this->active_company)
                 ->orderBy('Code', 'DESC')
-                ->limit(16)
+                ->limit(18)
                 ->get();
 
             foreach ($categotyImageCreation as $categoryImage) {
@@ -111,7 +114,7 @@ class GeneralController extends Controller
             $categoriesList = CategoryModel::select('Code', 'Name', 'Comment', 'PicName')
                 ->where('CodeCompany', $this->active_company)
                 ->orderBy('Code', 'DESC')
-                ->limit(16)
+                ->limit(18)
                 ->get();
 
             return response()->json([

@@ -114,7 +114,10 @@ class SubCategories extends Controller
         File::put($imagePath, $data->Pic);
 
         Image::configure(['driver' => 'gd']);
-        Image::make($imagePath)->encode('webp', 100)->resize(250, 250)->save($webpPath);
+        Image::make($imagePath)->encode('webp', 100)->resize(250, 250, function ($constraint) {
+            $constraint->aspectRatio();
+            $constraint->upsize();
+        })->save($webpPath);
 
         File::delete($imagePath);
     }
@@ -132,7 +135,11 @@ class SubCategories extends Controller
         File::put($imagePath, $data->Pic);
 
         Image::configure(['driver' => 'gd']);
-        Image::make($imagePath)->encode('webp', 80)->resize(250, 250)->save($webpPath);
+
+        Image::make($imagePath)->encode('webp', 100)->resize(250, 250, function ($constraint) {
+            $constraint->aspectRatio();
+            $constraint->upsize();
+        })->save($webpPath);
 
         File::delete($imagePath);
     }
@@ -147,42 +154,32 @@ class SubCategories extends Controller
         }
     }
 
-    protected function CreateProductImages($data, $picName)
+    protected function createProductImages($data, $picName): bool
     {
-        $GCodePathOriginal = public_path('products-image/original/' . ceil($data->GCode));
-        if (!File::isDirectory($GCodePathOriginal)) {
-            File::makeDirectory($GCodePathOriginal, 0755, true, true);
+        try {
+            $imagePath = public_path("products-image/original/{$picName}.jpg");
+            $webpPath = public_path("products-image/webp/{$picName}.webp");
+
+            File::put($imagePath, $data->Pic);
+
+            Image::configure(['driver' => 'gd']);
+            Image::make($imagePath)
+                ->encode('webp', 100)
+                ->resize(250, 250, function ($constraint) {
+                    $constraint->aspectRatio();
+                    $constraint->upsize();
+                })
+                ->save($webpPath);
+
+            File::delete($imagePath);
+
+            return true;
+        } catch (Exception $e) {
+            Log::error("Failed to create product image: {$e->getMessage()}");
+            return false;
         }
-
-        $SCodePathOriginal = public_path('products-image/original/' . ceil($data->GCode) . '/' . ceil($data->SCode));
-        if (!File::isDirectory($SCodePathOriginal)) {
-            File::makeDirectory($SCodePathOriginal, 0755, true, true);
-        }
-
-        $GCodePathWebp = public_path('products-image/webp/' . ceil($data->GCode));
-        if (!File::isDirectory($GCodePathWebp)) {
-            File::makeDirectory($GCodePathWebp, 0755, true, true);
-        }
-
-        $SCodePathWebp = public_path('products-image/webp/' . ceil($data->GCode) . '/' . ceil($data->SCode));
-        if (!File::isDirectory($SCodePathWebp)) {
-            File::makeDirectory($SCodePathWebp, 0755, true, true);
-        }
-
-        $dir = "products-image/original/" . ceil($data->GCode) . "/" . ceil($data->SCode);
-        $webpDir = "products-image/webp/" . ceil($data->GCode) . "/" . ceil($data->SCode);
-
-        $imagePath = "$dir/$picName.jpg";
-        $webpPath = "$webpDir/$picName.webp";
-
-        File::put(public_path($imagePath), $data->Pic);
-        Image::configure(['driver' => 'gd']);
-
-        $image = Image::make(public_path($imagePath));
-        $image->encode('webp', 100)->resize(250, 250)->save(public_path($webpPath), 100);
-
-        File::delete(public_path($imagePath));
     }
+
 
     protected function list_subcategories($Code)
     {
@@ -342,23 +339,30 @@ class SubCategories extends Controller
                 'Pic',
                 'ImageCode',
                 'created_at',
-                'GCode',
-                'SCode',
                 'Code',
                 'CChangePic',
-                'PicName'
             ])
                 ->paginate(24, ['*'], 'product_page');
 
-            foreach ($imageCreation as $image) {
-                if ($image->CChangePic == 1 && !empty($image->Pic)) {
-                    $createdAt = Carbon::parse($image->created_at);
-                    $picName = ceil($image->ImageCode) . "_" . $createdAt->getTimestamp();
-                    $this->CreateProductImages($image, $picName);
-                    DB::table('KalaImage')->where('Code', $image->ImageCode)->update(['PicName' => $picName]);
-                    DB::table('Kala')->where('Code', $image->Code)->update(['CChangePic' => 0]);
+            DB::transaction(function () use ($imageCreation) {
+                foreach ($imageCreation as $product) {
+                    if ($product->CChangePic == 1 && !empty($product->Pic)) {
+                        $createdAt = Carbon::parse($product->created_at);
+                        $picName = "{$product->ImageCode}_{$createdAt->getTimestamp()}";
+
+                        if ($this->createProductImages($product, $picName)) {
+                            DB::table('KalaImage')
+                                ->where('Code', $product->ImageCode)
+                                ->update(['PicName' => $picName]);
+
+                            DB::table('Kala')
+                                ->where('Code', $product->Code)
+                                ->update(['CChangePic' => 0]);
+                        }
+                    }
                 }
-            }
+            });
+
 
             $productResult = $query->select([
                 'CodeCompany',
@@ -436,23 +440,30 @@ class SubCategories extends Controller
                 'Pic',
                 'ImageCode',
                 'created_at',
-                'GCode',
-                'SCode',
                 'Code',
                 'CChangePic',
-                'PicName'
             ])
                 ->paginate(24, ['*'], 'product_page');
 
-            foreach ($imageCreation as $image) {
-                if ($image->CChangePic == 1 && !empty($image->Pic)) {
-                    $createdAt = Carbon::parse($image->created_at);
-                    $picName = ceil($image->ImageCode) . "_" . $createdAt->getTimestamp();
-                    $this->CreateProductImages($image, $picName);
-                    DB::table('KalaImage')->where('Code', $image->ImageCode)->update(['PicName' => $picName]);
-                    DB::table('Kala')->where('Code', $image->Code)->update(['CChangePic' => 0]);
+            DB::transaction(function () use ($imageCreation) {
+                foreach ($imageCreation as $product) {
+                    if ($product->CChangePic == 1 && !empty($product->Pic)) {
+                        $createdAt = Carbon::parse($product->created_at);
+                        $picName = "{$product->ImageCode}_{$createdAt->getTimestamp()}";
+
+                        if ($this->createProductImages($product, $picName)) {
+                            DB::table('KalaImage')
+                                ->where('Code', $product->ImageCode)
+                                ->update(['PicName' => $picName]);
+
+                            DB::table('Kala')
+                                ->where('Code', $product->Code)
+                                ->update(['CChangePic' => 0]);
+                        }
+                    }
                 }
-            }
+            });
+
 
             $productResult = $query->select([
                 'CodeCompany',
@@ -529,23 +540,30 @@ class SubCategories extends Controller
                 'Pic',
                 'ImageCode',
                 'created_at',
-                'GCode',
-                'SCode',
                 'Code',
                 'CChangePic',
-                'PicName'
             ])
                 ->paginate(24, ['*'], 'product_page');
 
-            foreach ($imageCreation as $image) {
-                if ($image->CChangePic == 1 && !empty($image->Pic)) {
-                    $createdAt = Carbon::parse($image->created_at);
-                    $picName = ceil($image->ImageCode) . "_" . $createdAt->getTimestamp();
-                    $this->CreateProductImages($image, $picName);
-                    DB::table('KalaImage')->where('Code', $image->ImageCode)->update(['PicName' => $picName]);
-                    DB::table('Kala')->where('Code', $image->Code)->update(['CChangePic' => 0]);
+            DB::transaction(function () use ($imageCreation) {
+                foreach ($imageCreation as $product) {
+                    if ($product->CChangePic == 1 && !empty($product->Pic)) {
+                        $createdAt = Carbon::parse($product->created_at);
+                        $picName = "{$product->ImageCode}_{$createdAt->getTimestamp()}";
+
+                        if ($this->createProductImages($product, $picName)) {
+                            DB::table('KalaImage')
+                                ->where('Code', $product->ImageCode)
+                                ->update(['PicName' => $picName]);
+
+                            DB::table('Kala')
+                                ->where('Code', $product->Code)
+                                ->update(['CChangePic' => 0]);
+                        }
+                    }
                 }
-            }
+            });
+
 
             $productResult = $query->select([
                 'CodeCompany',
@@ -622,23 +640,31 @@ class SubCategories extends Controller
                 'Pic',
                 'ImageCode',
                 'created_at',
-                'GCode',
-                'SCode',
                 'Code',
                 'CChangePic',
                 'PicName'
             ])
                 ->paginate(24, ['*'], 'product_page');
 
-            foreach ($imageCreation as $image) {
-                if ($image->CChangePic == 1 && !empty($image->Pic)) {
-                    $createdAt = Carbon::parse($image->created_at);
-                    $picName = ceil($image->ImageCode) . "_" . $createdAt->getTimestamp();
-                    $this->CreateProductImages($image, $picName);
-                    DB::table('KalaImage')->where('Code', $image->ImageCode)->update(['PicName' => $picName]);
-                    DB::table('Kala')->where('Code', $image->Code)->update(['CChangePic' => 0]);
+            DB::transaction(function () use ($imageCreation) {
+                foreach ($imageCreation as $product) {
+                    if ($product->CChangePic == 1 && !empty($product->Pic)) {
+                        $createdAt = Carbon::parse($product->created_at);
+                        $picName = "{$product->ImageCode}_{$createdAt->getTimestamp()}";
+
+                        if ($this->createProductImages($product, $picName)) {
+                            DB::table('KalaImage')
+                                ->where('Code', $product->ImageCode)
+                                ->update(['PicName' => $picName]);
+
+                            DB::table('Kala')
+                                ->where('Code', $product->Code)
+                                ->update(['CChangePic' => 0]);
+                        }
+                    }
                 }
-            }
+            });
+
 
             $productResult = $query->select([
                 'CodeCompany',
@@ -711,27 +737,33 @@ class SubCategories extends Controller
             }
 
             $imageCreation = $query->select([
-
                 'Pic',
                 'KCode as Code',
                 'ImageCode',
                 'created_at',
                 'CChangePic',
-                'GCode',
-                'SGCode as SCode',
-                'PicName'
             ])
                 ->paginate(24, ['*'], 'product_page');
 
-            foreach ($imageCreation as $image) {
-                if ($image->CChangePic == 1 && !empty($image->Pic)) {
-                    $createdAt = Carbon::parse($image->created_at);
-                    $picName = ceil($image->ImageCode) . "_" . $createdAt->getTimestamp();
-                    $this->CreateProductImages($image, $picName);
-                    DB::table('KalaImage')->where('Code', $image->ImageCode)->update(['PicName' => $picName]);
-                    DB::table('Kala')->where('Code', $image->Code)->update(['CChangePic' => 0]);
+
+            DB::transaction(function () use ($imageCreation) {
+                foreach ($imageCreation as $product) {
+                    if ($product->CChangePic == 1 && !empty($product->Pic)) {
+                        $createdAt = Carbon::parse($product->created_at);
+                        $picName = "{$product->ImageCode}_{$createdAt->getTimestamp()}";
+
+                        if ($this->createProductImages($product, $picName)) {
+                            DB::table('KalaImage')
+                                ->where('Code', $product->ImageCode)
+                                ->update(['PicName' => $picName]);
+
+                            DB::table('Kala')
+                                ->where('Code', $product->Code)
+                                ->update(['CChangePic' => 0]);
+                        }
+                    }
                 }
-            }
+            });
 
             $productResult = $query->select([
                 'GCode',
