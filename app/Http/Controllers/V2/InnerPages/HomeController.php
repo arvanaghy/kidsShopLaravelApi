@@ -229,7 +229,7 @@ class HomeController extends Controller
             }
 
             return DB::table('DeviceHeaderImage')
-                ->select('Comment', 'PicName', 'Code')
+                ->select('Comment', 'PicName', 'Code', 'CodeKalaSubGroup')
                 ->where('CodeCompany', $this->active_company)
                 ->whereNotNull('Pic')
                 ->orderBy('Code', 'DESC')
