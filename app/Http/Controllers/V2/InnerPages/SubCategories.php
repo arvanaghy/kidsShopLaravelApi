@@ -20,7 +20,6 @@ class SubCategories extends Controller
     protected $active_company = null;
     protected $financial_period = null;
 
-
     protected function CreateProductPath()
     {
         $paths = [
