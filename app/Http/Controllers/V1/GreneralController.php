@@ -181,7 +181,7 @@ class GreneralController extends Controller
                 $this->send_sms_via_webone($validated['contact'], ' کاربر گرامی با تشکر از تماس شما، پیغام شما با موفقیت دریافت شد ');
             }
 
-            $this->send_sms_via_webone('09354662900', 'یک پیغام از' . $validated['info'] . ' - ' . $validated['contact'] . ' - ' . $validated['message'] . 'دارید');
+            $this->send_sms_via_webone('09149276590', 'یک پیغام از' . $validated['info'] . ' - ' . $validated['contact'] . ' - ' . $validated['message'] . 'دارید');
 
 
             if (true) {
