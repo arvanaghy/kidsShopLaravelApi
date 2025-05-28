@@ -167,7 +167,7 @@ class HomeController extends Controller
             $imageCreation = CategoryModel::select('Pic', 'Code', 'CChangePic', 'PicName')
                 ->where('CodeCompany', $this->active_company)
                 ->orderBy('Code', 'DESC')
-                ->limit(16)
+                ->limit(8)
                 ->get();
 
             foreach ($imageCreation as $image) {
@@ -191,7 +191,7 @@ class HomeController extends Controller
             return CategoryModel::select('Code', 'Name', 'Comment', 'PicName')
                 ->where('CodeCompany', $this->active_company)
                 ->orderBy('Code', 'DESC')
-                ->limit(16)
+                ->limit(8)
                 ->get();
         } catch (Exception $e) {
             return response()->json([
@@ -302,7 +302,7 @@ class HomeController extends Controller
                     'created_at',
                 ])
                 ->orderBy('UCode', 'ASC')
-                ->limit(16)
+                ->limit(8)
                 ->get();
 
             DB::transaction(function () use ($products) {
@@ -356,7 +356,7 @@ class HomeController extends Controller
                     'PicName'
                 )
                 ->orderBy('UCode', 'ASC')
-                ->limit(16)
+                ->limit(8)
                 ->get();
         } catch (Exception $e) {
             return response()->json([
@@ -373,7 +373,7 @@ class HomeController extends Controller
 
             $products = ProductModel::query()
                 ->where('CodeCompany', $this->active_company)
-                ->where('CFestival', 0)
+                ->where('CFestival', 1)
                 ->where('CShowInDevice', 1)
                 ->select([
                     'Code',
@@ -383,7 +383,7 @@ class HomeController extends Controller
                     'created_at',
                 ])
                 ->orderBy('UCode', 'ASC')
-                ->limit(16)
+                ->limit(8)
                 ->get();
 
             DB::transaction(function () use ($products) {
@@ -438,9 +438,9 @@ class HomeController extends Controller
                     'KVahed',
                     'PicName'
                 )
-                ->where('CFestival', 0)
+                ->where('CFestival', 1)
                 ->orderBy('UCode', 'ASC')
-                ->limit(16)
+                ->limit(8)
                 ->get();
         } catch (Exception $e) {
             return response()->json([
@@ -457,7 +457,7 @@ class HomeController extends Controller
             $products = BestSellModel::query()->select('Pic', 'KCode as Code', 'ImageCode', 'created_at', 'CChangePic', 'PicName')
                 ->where('CShowInDevice', 1)
                 ->where('CodeCompany', $this->active_company)
-                ->limit(16)
+                ->limit(8)
                 ->get();
 
             DB::transaction(function () use ($products) {
@@ -500,7 +500,7 @@ class HomeController extends Controller
                 'GPoint',
                 'KVahed',
                 'PicName'
-            )->where('CodeCompany', $this->active_company)->where('CShowInDevice', 1)->orderBy('KMegdar', 'DESC')->limit(16)->get();
+            )->where('CodeCompany', $this->active_company)->where('CShowInDevice', 1)->orderBy('KMegdar', 'DESC')->limit(8)->get();
         } catch (Exception $e) {
             return response()->json([
                 'message' => 'Error: ' . $e->getMessage(),
