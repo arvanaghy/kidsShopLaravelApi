@@ -167,7 +167,7 @@ class HomeController extends Controller
             $imageCreation = CategoryModel::select('Pic', 'Code', 'CChangePic', 'PicName')
                 ->where('CodeCompany', $this->active_company)
                 ->orderBy('Code', 'DESC')
-                ->limit(8)
+                ->limit(12)
                 ->get();
 
             foreach ($imageCreation as $image) {
@@ -191,7 +191,7 @@ class HomeController extends Controller
             return CategoryModel::select('Code', 'Name', 'Comment', 'PicName')
                 ->where('CodeCompany', $this->active_company)
                 ->orderBy('Code', 'DESC')
-                ->limit(8)
+                ->limit(12)
                 ->get();
         } catch (Exception $e) {
             return response()->json([
