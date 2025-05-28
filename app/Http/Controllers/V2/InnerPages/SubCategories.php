@@ -1134,8 +1134,8 @@ class SubCategories extends Controller
             return response()->json([
                 'result' => [
                     'products' => $products,
-                    'colors' => $this->list_colors('offers', 'all'),
-                    'sizes' => $this->list_sizes('offers', 'all'),
+                    'colors' => $this->list_colors('all', 'offers'),
+                    'sizes' => $this->list_sizes('all', 'offers'),
                     'prices' => $this->list_prices($products),
                 ],
                 'message' => 'دریافت اطلاعات با موفقیت انجام شد'
