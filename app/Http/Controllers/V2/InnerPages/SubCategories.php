@@ -1125,7 +1125,7 @@ class SubCategories extends Controller
         try {
             $productPage = $request->query('product_page', 1);
 
-            $products = $this->list_products();
+            $products = $this->list_offered_products();
             if ($products instanceof \Illuminate\Http\JsonResponse) {
                 return $products;
             }
