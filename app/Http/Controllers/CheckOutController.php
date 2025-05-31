@@ -46,7 +46,7 @@ class CheckOutController extends Controller
                 throw new Exception('تراکنش پیدا نشد');
             }
 
-            $data = array("merchant_id" => "f634f841-932c-4960-ac7d-51cababd45ed", "authority" => $paymentResult->TrID, "amount" => (int)$paymentResult->Mablag);
+            $data = array("merchant_id" => "87955b91-59e8-4753-af27-b2815b9c6b40", "authority" => $paymentResult->TrID, "amount" => (int)$paymentResult->Mablag);
             $jsonData = json_encode($data);
             $ch = curl_init('https://api.zarinpal.com/pg/v4/payment/verify.json');
             curl_setopt($ch, CURLOPT_USERAGENT, 'ZarinPal Rest Api v4');
@@ -88,13 +88,13 @@ class CheckOutController extends Controller
                         'Mablag' => $paymentResult->Mablag,
                         'Babat' => $paymentResult->Comment .  ' با کد رهگیری  ' . $result['data']['ref_id']
                     ]);
-                    return redirect('https://electroshop24.ir/payment-success/' . urlencode($result['data']['ref_id']));
+                    return redirect('https://kidsshop110.ir/payment-success/' . urlencode($result['data']['ref_id']));
                 } else {
                     throw new Exception($result['errors']['message'] .  $result['errors']['code']);
                 }
             }
         } catch (Exception $e) {
-            return redirect('https://electroshop24.ir/payment-failed?exception=' . urlencode($e->getMessage()));
+            return redirect('https://kidsshop110.ir/payment-failed?exception=' . urlencode($e->getMessage()));
         }
     }
 
@@ -112,7 +112,7 @@ class CheckOutController extends Controller
                 throw new Exception('تراکنش پیدا نشد');
             }
 
-            $data = array("merchant_id" => "f634f841-932c-4960-ac7d-51cababd45ed", "authority" => $paymentResult->TrID, "amount" => (int)$paymentResult->Mablag);
+            $data = array("merchant_id" => "87955b91-59e8-4753-af27-b2815b9c6b40", "authority" => $paymentResult->TrID, "amount" => (int)$paymentResult->Mablag);
             $jsonData = json_encode($data);
             $ch = curl_init('https://api.zarinpal.com/pg/v4/payment/verify.json');
             curl_setopt($ch, CURLOPT_USERAGENT, 'ZarinPal Rest Api v4');
@@ -154,13 +154,13 @@ class CheckOutController extends Controller
                         'Mablag' => $paymentResult->Mablag,
                         'Babat' => $paymentResult->Comment .  ' با کد رهگیری  ' . $result['data']['ref_id']
                     ]);
-                    return redirect('https://electroshop24.ir/payment-success-mobile/' . urlencode($result['data']['ref_id']));
+                    return redirect('https://kidsshop110.ir/payment-success-mobile/' . urlencode($result['data']['ref_id']));
                 } else {
                     throw new Exception($result['errors']['message'] .  $result['errors']['code']);
                 }
             }
         } catch (Exception $e) {
-            return redirect('https://electroshop24.ir/payment-failed-mobile?exception=' . urlencode($e->getMessage()));
+            return redirect('https://kidsshop110.ir/payment-failed-mobile?exception=' . urlencode($e->getMessage()));
         }
     }
 
@@ -173,9 +173,9 @@ class CheckOutController extends Controller
                 'referenceId.required' => 'کد رهگیری یافت نشد',
             ]);
             $referenceId = $request->referenceId;
-            return redirect('https://electroshop24.ir/payment-success/' . urlencode($referenceId));
+            return redirect('https://kidsshop110.ir/payment-success/' . urlencode($referenceId));
         } catch (Exception $e) {
-            return redirect('https://electroshop24.ir/payment-failed?exception=' . urlencode($e->getMessage()));
+            return redirect('https://kidsshop110.ir/payment-failed?exception=' . urlencode($e->getMessage()));
         }
     }
 
@@ -189,14 +189,14 @@ class CheckOutController extends Controller
                 'exception.required' => 'خطایی در پرداخت اتفاق افتاده است',
             ]);
             $exception = $request->exception;
-            return redirect('https://electroshop24.ir/payment-failed?exception=' . urlencode($exception));
+            return redirect('https://kidsshop110.ir/payment-failed?exception=' . urlencode($exception));
         } catch (Exception $e) {
-            return redirect('https://electroshop24.ir/payment-failed?exception=' . urlencode($e->getMessage()));
+            return redirect('https://kidsshop110.ir/payment-failed?exception=' . urlencode($e->getMessage()));
         }
     }
 
     public function bad_request()
     {
-        return redirect('https://electroshop24.ir/payment-failed?exception=badRequestPage');
+        return redirect('https://kidsshop110.ir/payment-failed?exception=badRequestPage');
     }
 }

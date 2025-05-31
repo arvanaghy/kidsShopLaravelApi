@@ -42,9 +42,9 @@ class WebPaymentController extends Controller
                 }
                 try {
                     $data = array(
-                        "merchant_id" => "f634f841-932c-4960-ac7d-51cababd45ed",
+                        "merchant_id" => "87955b91-59e8-4753-af27-b2815b9c6b40",
                         "amount" => (int)$Sorder->JamKK,
-                        "callback_url" => "https://api.electroshop24.ir/api/v1/zarinpal-payment-callback",
+                        "callback_url" => "https://api.kidsshop110.ir/api/v1/zarinpal-payment-callback",
                         "description" => 'واریز کاربر ' . $userResult->Name . ' برای پیش فاکتور ' . $request->orderCode,
                         "metadata" => ["email" => $userResult->Email, "mobile" => $userResult->Mobile, "name" => $userResult->Name, "order_id" => $request->orderCode]
                     );
@@ -99,10 +99,10 @@ class WebPaymentController extends Controller
                     var_dump($e->getMessage());
                 }
             } else {
-                return redirect('https://electroshop24.ir/payment-failed');
+                return redirect('https://kidsshop110.ir/payment-failed');
             }
         } else {
-            return redirect('https://electroshop24.ir/payment-failed');
+            return redirect('https://kidsshop110.ir/payment-failed');
         }
     }
 
@@ -132,7 +132,7 @@ class WebPaymentController extends Controller
                         'Comment' => $invoice->getDetails()['description'],
                         'Mablag' => $invoice->getAmount(),
                     ]);
-                    return Payment::callbackUrl('https://electroshop24.ir/web-payment')->purchase(
+                    return Payment::callbackUrl('https://kidsshop110.ir/web-payment')->purchase(
                         $invoice,
                         function ($driver, $transactionId) use ($id) {
                             WebPaymentModel::where('UUID', $id->UUID)->update([
@@ -141,13 +141,13 @@ class WebPaymentController extends Controller
                         }
                     )->pay()->render();
                 } catch (Exception $e) {
-                    return redirect('https://electroshop24.ir/payment-failed');
+                    return redirect('https://kidsshop110.ir/payment-failed');
                 }
             } else {
-                return redirect('https://electroshop24.ir/payment-failed');
+                return redirect('https://kidsshop110.ir/payment-failed');
             }
         } else {
-            return redirect('https://electroshop24.ir/payment-failed');
+            return redirect('https://kidsshop110.ir/payment-failed');
         }
     }
 
@@ -157,7 +157,7 @@ class WebPaymentController extends Controller
         if ($request->BearerToken and $request->BearerToken != null and $request->orderCode and $request->orderCode != null) {
             $userResult = CustomerModel::where('UToken', $request->BearerToken)->first();
             if (!$userResult) {
-                return redirect('https://electroshop24.ir/payment-failed-mobile?exception=' . urlencode('کاربری با این توکن وجود ندارد'));
+                return redirect('https://kidsshop110.ir/payment-failed-mobile?exception=' . urlencode('کاربری با این توکن وجود ندارد'));
             } else if ($userResult) {
 
                 $Sorder  = DB::table('AV_SOrder_View')->where('Code', $request->orderCode)->first();
@@ -166,9 +166,9 @@ class WebPaymentController extends Controller
                 }
                 try {
                     $data = array(
-                        "merchant_id" => "f634f841-932c-4960-ac7d-51cababd45ed",
+                        "merchant_id" => "87955b91-59e8-4753-af27-b2815b9c6b40",
                         "amount" => (int)$Sorder->JamKK,
-                        "callback_url" => "https://api.electroshop24.ir/api/v1/zarinpal-payment-callback-mobile",
+                        "callback_url" => "https://api.kidsshop.ir/api/v1/zarinpal-payment-callback-mobile",
                         "description" => 'واریز کاربر ' . $userResult->Name . ' برای پیش فاکتور ' . $request->orderCode,
                         "metadata" => ["email" => $userResult->Email, "mobile" => $userResult->Mobile, "name" => $userResult->Name, "order_id" => $request->orderCode]
                     );
@@ -190,7 +190,7 @@ class WebPaymentController extends Controller
                     curl_close($ch);
 
                     if ($err) {
-                        return redirect('https://electroshop24.ir/payment-failed-mobile?exception=' . urlencode('خطا در ارتباط  با زرین پال ' .  $err));
+                        return redirect('https://kidsshop110.ir/payment-failed-mobile?exception=' . urlencode('خطا در ارتباط  با زرین پال ' .  $err));
                     } else {
                         if (empty($result['errors'])) {
                             if ($result['data']['code'] == 100) {
@@ -207,15 +207,15 @@ class WebPaymentController extends Controller
                                 header('Location: https://www.zarinpal.com/pg/StartPay/' . $result['data']["authority"]);
                             }
                         } else {
-                            return redirect('https://electroshop24.ir/payment-failed-mobile?exception=' . urlencode($result['errors']['message']));
+                            return redirect('https://kidsshop110.ir/payment-failed-mobile?exception=' . urlencode($result['errors']['message']));
                         }
                     }
                 } catch (Exception $e) {
-                    return redirect('https://electroshop24.ir/payment-failed-mobile?exception=' . urlencode($e->getMessage()));
+                    return redirect('https://kidsshop110.ir/payment-failed-mobile?exception=' . urlencode($e->getMessage()));
                 }
             }
         } else {
-            return redirect('https://electroshop24.ir/payment-failed-mobile?exception=' . urlencode('کاربری با این توکن یافت نشد'));
+            return redirect('https://kidsshop110.ir/payment-failed-mobile?exception=' . urlencode('کاربری با این توکن یافت نشد'));
         }
     }
 
@@ -232,9 +232,9 @@ class WebPaymentController extends Controller
             if ($userResult) {
                 try {
                     $data = array(
-                        "merchant_id" => "f634f841-932c-4960-ac7d-51cababd45ed",
+                        "merchant_id" => "87955b91-59e8-4753-af27-b2815b9c6b40",
                         "amount" => $request->amount,
-                        "callback_url" => "https://api.electroshop24.ir/api/v1/zarinpal-payment-callback-mobile",
+                        "callback_url" => "https://api.kidsshop110.ir/api/v1/zarinpal-payment-callback-mobile",
                         "description" => 'واریز کاربر ' . $userResult->Name . ' به مبلغ مستقیم ' . $request->amount,
                         "metadata" => ["email" => $userResult->Email, "mobile" => $userResult->Mobile, "name" => $userResult->Name]
                     );
@@ -275,17 +275,17 @@ class WebPaymentController extends Controller
                                 header('Location: https://www.zarinpal.com/pg/StartPay/' . $result['data']["authority"]);
                             }
                         } else {
-                            return redirect('https://electroshop24.ir/payment-failed-mobile?exception=' . urlencode($result['errors']['message']));
+                            return redirect('https://kidsshop110.ir/payment-failed-mobile?exception=' . urlencode($result['errors']['message']));
                         }
                     }
                 } catch (Exception $e) {
-                    return redirect('https://electroshop24.ir/payment-failed-mobile?exception=' . urlencode($e->getMessage()));
+                    return redirect('https://kidsshop110.ir/payment-failed-mobile?exception=' . urlencode($e->getMessage()));
                 }
             } else {
-                return redirect('https://electroshop24.ir/payment-failed-mobile?exception=' . urlencode('کاربری با این توکن یافت نشد'));
+                return redirect('https://kidsshop110.ir/payment-failed-mobile?exception=' . urlencode('کاربری با این توکن یافت نشد'));
             }
         } else {
-            return redirect('https://electroshop24.ir/payment-failed-mobile?exception=' . urlencode('کاربری با این توکن یافت نشد'));
+            return redirect('https://kidsshop110.ir/payment-failed-mobile?exception=' . urlencode('کاربری با این توکن یافت نشد'));
         }
     }
 }
