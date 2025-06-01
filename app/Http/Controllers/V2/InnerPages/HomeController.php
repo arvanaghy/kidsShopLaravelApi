@@ -291,22 +291,23 @@ class HomeController extends Controller
     protected function fetchNewestProducts()
     {
         try {
-            $products = ProductModel::query()
+
+            $query = ProductModel::with(['productSizeColor'])
                 ->where('CodeCompany', $this->active_company)
                 ->where('CShowInDevice', 1)
-                ->select([
-                    'Code',
-                    'ImageCode',
-                    'Pic',
-                    'CChangePic',
-                    'created_at',
-                ])
-                ->orderBy('UCode', 'ASC')
-                ->limit(8)
-                ->get();
+                ->orderBy('Code', 'DESC');
 
-            DB::transaction(function () use ($products) {
-                foreach ($products as $product) {
+
+            $imageCreation = $query->select([
+                'Pic',
+                'ImageCode',
+                'created_at',
+                'Code',
+                'CChangePic',
+            ])->limit(8)->get();
+
+            DB::transaction(function () use ($imageCreation) {
+                foreach ($imageCreation as $product) {
                     if ($product->CChangePic == 1 && !empty($product->Pic)) {
                         $createdAt = Carbon::parse($product->created_at);
                         $picName = "{$product->ImageCode}_{$createdAt->getTimestamp()}";
@@ -324,40 +325,35 @@ class HomeController extends Controller
                 }
             });
 
-            return ProductModel::with(['productSizeColor'])->where('CodeCompany', $this->active_company)
-                ->where('CShowInDevice', 1)
-                ->select(
-                    'CodeCompany',
-                    'CanSelect',
-                    'GCode',
-                    'GName',
-                    'Comment',
-                    'SCode',
-                    'SName',
-                    'Code',
-                    'CodeKala',
-                    'Name',
-                    'Model',
-                    'UCode',
-                    'Vahed',
-                    'KMegdar',
-                    'KPrice',
-                    'SPrice',
-                    'KhordePrice',
-                    'OmdePrice',
-                    'HamkarPrice',
-                    'AgsatPrice',
-                    'CheckPrice',
-                    'DForoosh',
-                    'CShowInDevice',
-                    'CFestival',
-                    'GPoint',
-                    'KVahed',
-                    'PicName'
-                )
-                ->orderBy('UCode', 'ASC')
-                ->limit(8)
-                ->get();
+
+            return $query->select([
+                'CodeCompany',
+                'CanSelect',
+                'GCode',
+                'GName',
+                'Comment',
+                'SCode',
+                'SName',
+                'Code',
+                'Name',
+                'Model',
+                'UCode',
+                'Vahed',
+                'KMegdar',
+                'KPrice',
+                'SPrice',
+                'KhordePrice',
+                'OmdePrice',
+                'HamkarPrice',
+                'AgsatPrice',
+                'CheckPrice',
+                'DForoosh',
+                'CShowInDevice',
+                'CFestival',
+                'GPoint',
+                'KVahed',
+                'PicName'
+            ])->limit(8)->get();
         } catch (Exception $e) {
             return response()->json([
                 'message' => 'Error: ' . $e->getMessage(),
@@ -370,24 +366,24 @@ class HomeController extends Controller
     {
 
         try {
-
-            $products = ProductModel::query()
+            $query = ProductModel::with(['productSizeColor'])
                 ->where('CodeCompany', $this->active_company)
-                ->where('CFestival', 1)
                 ->where('CShowInDevice', 1)
-                ->select([
-                    'Code',
-                    'ImageCode',
-                    'Pic',
-                    'CChangePic',
-                    'created_at',
-                ])
-                ->orderBy('UCode', 'ASC')
-                ->limit(8)
-                ->get();
+                ->where('CFestival', 1)
+                ->orderBy('UCode', 'ASC');
 
-            DB::transaction(function () use ($products) {
-                foreach ($products as $product) {
+
+
+            $imageCreation = $query->select([
+                'Pic',
+                'ImageCode',
+                'created_at',
+                'Code',
+                'CChangePic',
+            ])->limit(8)->get();
+
+            DB::transaction(function () use ($imageCreation) {
+                foreach ($imageCreation as $product) {
                     if ($product->CChangePic == 1 && !empty($product->Pic)) {
                         $createdAt = Carbon::parse($product->created_at);
                         $picName = "{$product->ImageCode}_{$createdAt->getTimestamp()}";
@@ -405,43 +401,35 @@ class HomeController extends Controller
                 }
             });
 
-            return ProductModel::with(['productSizeColor', 'productImages' => function ($query) {
-                $query->select('Code', 'PicName', 'Def', 'CodeKala');
-            }])->where('CodeCompany', $this->active_company)
-                ->where('CShowInDevice', 1)
-                ->select(
-                    'CodeCompany',
-                    'CanSelect',
-                    'GCode',
-                    'GName',
-                    'Comment',
-                    'SCode',
-                    'SName',
-                    'Code',
-                    'CodeKala',
-                    'Name',
-                    'Model',
-                    'UCode',
-                    'Vahed',
-                    'KMegdar',
-                    'KPrice',
-                    'SPrice',
-                    'KhordePrice',
-                    'OmdePrice',
-                    'HamkarPrice',
-                    'AgsatPrice',
-                    'CheckPrice',
-                    'DForoosh',
-                    'CShowInDevice',
-                    'CFestival',
-                    'GPoint',
-                    'KVahed',
-                    'PicName'
-                )
-                ->where('CFestival', 1)
-                ->orderBy('UCode', 'ASC')
-                ->limit(8)
-                ->get();
+
+            return $query->select([
+                'CodeCompany',
+                'CanSelect',
+                'GCode',
+                'GName',
+                'Comment',
+                'SCode',
+                'SName',
+                'Code',
+                'Name',
+                'Model',
+                'UCode',
+                'Vahed',
+                'KMegdar',
+                'KPrice',
+                'SPrice',
+                'KhordePrice',
+                'OmdePrice',
+                'HamkarPrice',
+                'AgsatPrice',
+                'CheckPrice',
+                'DForoosh',
+                'CShowInDevice',
+                'CFestival',
+                'GPoint',
+                'KVahed',
+                'PicName'
+            ])->limit(8)->get();
         } catch (Exception $e) {
             return response()->json([
                 'message' => 'Error: ' . $e->getMessage(),
@@ -454,14 +442,22 @@ class HomeController extends Controller
     {
         try {
 
-            $products = BestSellModel::query()->select('Pic', 'KCode as Code', 'ImageCode', 'created_at', 'CChangePic', 'PicName')
-                ->where('CShowInDevice', 1)
+            $query = ProductModel::with(['productSizeColor'])
                 ->where('CodeCompany', $this->active_company)
-                ->limit(8)
-                ->get();
+                ->where('CShowInDevice', 1);
 
-            DB::transaction(function () use ($products) {
-                foreach ($products as $product) {
+            $query->orderByRaw('(SELECT SUM(Mande) FROM AV_KalaSizeColorMande_View WHERE AV_KalaSizeColorMande_View.CodeKala = AV_KalaList_View.Code) DESC');
+
+            $imageCreation = $query->select([
+                'Pic',
+                'ImageCode',
+                'created_at',
+                'Code',
+                'CChangePic',
+            ])->limit(8)->get();
+
+            DB::transaction(function () use ($imageCreation) {
+                foreach ($imageCreation as $product) {
                     if ($product->CChangePic == 1 && !empty($product->Pic)) {
                         $createdAt = Carbon::parse($product->created_at);
                         $picName = "{$product->ImageCode}_{$createdAt->getTimestamp()}";
@@ -479,16 +475,22 @@ class HomeController extends Controller
                 }
             });
 
-            return  BestSellModel::with(['productSizeColor'])->select(
+
+            return $query->select([
+                'CodeCompany',
+                'CanSelect',
                 'GCode',
                 'GName',
-                'SGCode as SCode',
-                'SGName as SName',
-                'KCode as Code',
-                'KName as Name',
-                'Vahed',
                 'Comment',
+                'SCode',
+                'SName',
+                'Code',
+                'Name',
+                'Model',
+                'UCode',
+                'Vahed',
                 'KMegdar',
+                'KPrice',
                 'SPrice',
                 'KhordePrice',
                 'OmdePrice',
@@ -497,10 +499,11 @@ class HomeController extends Controller
                 'CheckPrice',
                 'DForoosh',
                 'CShowInDevice',
+                'CFestival',
                 'GPoint',
                 'KVahed',
                 'PicName'
-            )->where('CodeCompany', $this->active_company)->where('CShowInDevice', 1)->orderBy('KMegdar', 'DESC')->limit(8)->get();
+            ])->limit(8)->get();
         } catch (Exception $e) {
             return response()->json([
                 'message' => 'Error: ' . $e->getMessage(),

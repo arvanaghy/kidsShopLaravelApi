@@ -36,7 +36,7 @@ Route::prefix('v1')->group(function () {
     Route::get('/reset-images', [ProductController::class, 'resetImages']);
     Route::get('/online', [GreneralController::class, 'online']);
     Route::get('/faq', [GreneralController::class, 'faq']);
-    Route::post('/insert-faq', [GreneralController::class, 'insert_faq']);
+
     Route::get('/about-us', [GreneralController::class, 'about_us']);
     Route::post('/login', [CustomerController::class, 'login']);
     Route::post('/register', [CustomerController::class, 'register']);
@@ -57,7 +57,7 @@ Route::prefix('v1')->group(function () {
     Route::get('/search-category-by-code/{Code}', [CategoryController::class, 'search_category_by_code']);
     Route::get('/search-subcategory-by-code/{Code}', [CategoryController::class, 'search_subcategory_by_code']);
     Route::get('/list-subcategory-products/{Code}', [ProductController::class, 'list_subcategory_products']);
-    // Route::get('/search/{SearchPhrase}', [SearchController::class, 'search']);
+
     Route::get('/search-categories/{Search}', [CategoryController::class, 'search_categories']);
     Route::get('/search-subcategories/{Search}', [CategoryController::class, 'search_subcategories']);
     Route::get('/list-category-products/{Code}', [ProductController::class, 'list_category_products']);
@@ -101,7 +101,6 @@ Route::prefix('v2')->group(function () {
     Route::get('/list-all-offers/', [WebSubCategories::class, 'listAllOffers']);
     Route::get('/list-best-seller/', [WebSubCategories::class, 'listBestSeller']);
     Route::get('/show-product/{Code}', [WebProductController::class, 'showProduct']);
-    Route::get('/test', [WebProductController::class, 'test']);
 
     Route::middleware('customerConfirm')->group(function () {
         Route::post('/submit-order', [WebOrderController::class, 'submit_order']);

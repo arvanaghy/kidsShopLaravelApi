@@ -298,7 +298,12 @@ class SubCategories extends Controller
 
             $sortPrice = strtolower($request->query('sort_price'));
             if ($request->has('sort_price') && in_array($sortPrice, ['asc', 'desc'])) {
-                $query->orderBy('SPrice', $sortPrice);
+                $sortPrice = in_array($sortPrice, ['asc', 'desc']) ? $sortPrice : 'asc';
+                if ($sortPrice === 'asc') {
+                    $query->orderByRaw('CASE WHEN SPrice > 0 THEN SPrice ELSE COALESCE((SELECT MIN(Mablag) FROM AV_KalaSizeColorMande_View WHERE AV_KalaSizeColorMande_View.CodeKala = AV_KalaList_View.Code AND AV_KalaSizeColorMande_View.Mande > 0), 999999999) END ASC');
+                } else {
+                    $query->orderByRaw('CASE WHEN SPrice > 0 THEN SPrice ELSE COALESCE((SELECT MIN(Mablag) FROM AV_KalaSizeColorMande_View WHERE AV_KalaSizeColorMande_View.CodeKala = AV_KalaList_View.Code AND AV_KalaSizeColorMande_View.Mande > 0), -999999999) END DESC');
+                }
             } else {
                 $query->orderBy('Code', 'DESC');
             }
@@ -412,11 +417,17 @@ class SubCategories extends Controller
             $query = ProductModel::with(['productSizeColor'])
                 ->where('CodeCompany', $this->active_company)
                 ->where('SCode', $subcategoryCode)
-                ->where('CShowInDevice', 1)
-                ->orderBy('Code', 'DESC');
+                ->where('CShowInDevice', 1);
 
             if ($sortPrice = $request->query('sort_price')) {
-                $query->orderBy('SPrice', $sortPrice);
+                $sortPrice = in_array($sortPrice, ['asc', 'desc']) ? $sortPrice : 'asc';
+                if ($sortPrice === 'asc') {
+                    $query->orderByRaw('CASE WHEN SPrice > 0 THEN SPrice ELSE COALESCE((SELECT MIN(Mablag) FROM AV_KalaSizeColorMande_View WHERE AV_KalaSizeColorMande_View.CodeKala = AV_KalaList_View.Code AND AV_KalaSizeColorMande_View.Mande > 0), 999999999) END ASC');
+                } else {
+                    $query->orderByRaw('CASE WHEN SPrice > 0 THEN SPrice ELSE COALESCE((SELECT MIN(Mablag) FROM AV_KalaSizeColorMande_View WHERE AV_KalaSizeColorMande_View.CodeKala = AV_KalaList_View.Code AND AV_KalaSizeColorMande_View.Mande > 0), -999999999) END DESC');
+                }
+            } else {
+                $query->orderBy('Code', 'DESC');
             }
 
             if ($search = $request->query('search')) {
@@ -512,11 +523,17 @@ class SubCategories extends Controller
 
             $query = ProductModel::with(['productSizeColor'])
                 ->where('CodeCompany', $this->active_company)
-                ->where('CShowInDevice', 1)
-                ->orderBy('Code', 'DESC');
+                ->where('CShowInDevice', 1);
 
             if ($sortPrice = $request->query('sort_price')) {
-                $query->orderBy('SPrice', $sortPrice);
+                $sortPrice = in_array($sortPrice, ['asc', 'desc']) ? $sortPrice : 'asc';
+                if ($sortPrice === 'asc') {
+                    $query->orderByRaw('CASE WHEN SPrice > 0 THEN SPrice ELSE COALESCE((SELECT MIN(Mablag) FROM AV_KalaSizeColorMande_View WHERE AV_KalaSizeColorMande_View.CodeKala = AV_KalaList_View.Code AND AV_KalaSizeColorMande_View.Mande > 0), 999999999) END ASC');
+                } else {
+                    $query->orderByRaw('CASE WHEN SPrice > 0 THEN SPrice ELSE COALESCE((SELECT MIN(Mablag) FROM AV_KalaSizeColorMande_View WHERE AV_KalaSizeColorMande_View.CodeKala = AV_KalaList_View.Code AND AV_KalaSizeColorMande_View.Mande > 0), -999999999) END DESC');
+                }
+            } else {
+                $query->orderBy('Code', 'DESC');
             }
 
             if ($search = $request->query('search')) {
@@ -612,11 +629,18 @@ class SubCategories extends Controller
             $query = ProductModel::with(['productSizeColor'])
                 ->where('CodeCompany', $this->active_company)
                 ->where('CShowInDevice', 1)
-                ->where('CFestival', 1)
-                ->orderBy('Code', 'DESC');
+                ->where('CFestival', 1);
+
 
             if ($sortPrice = $request->query('sort_price')) {
-                $query->orderBy('SPrice', $sortPrice);
+                $sortPrice = in_array($sortPrice, ['asc', 'desc']) ? $sortPrice : 'asc';
+                if ($sortPrice === 'asc') {
+                    $query->orderByRaw('CASE WHEN SPrice > 0 THEN SPrice ELSE COALESCE((SELECT MIN(Mablag) FROM AV_KalaSizeColorMande_View WHERE AV_KalaSizeColorMande_View.CodeKala = AV_KalaList_View.Code AND AV_KalaSizeColorMande_View.Mande > 0), 999999999) END ASC');
+                } else {
+                    $query->orderByRaw('CASE WHEN SPrice > 0 THEN SPrice ELSE COALESCE((SELECT MIN(Mablag) FROM AV_KalaSizeColorMande_View WHERE AV_KalaSizeColorMande_View.CodeKala = AV_KalaList_View.Code AND AV_KalaSizeColorMande_View.Mande > 0), -999999999) END DESC');
+                }
+            } else {
+                $query->orderBy('Code', 'DESC');
             }
 
             if ($search = $request->query('search')) {
@@ -710,14 +734,13 @@ class SubCategories extends Controller
         try {
             $request = request();
 
-            $query = BestSellModel::with(['productSizeColor'])
+            $query = ProductModel::with(['productSizeColor'])
                 ->where('CodeCompany', $this->active_company)
-                ->where('CShowInDevice', 1)
-                ->orderBy('KMegdar', 'DESC');
+                ->where('CShowInDevice', 1);
 
-            if ($sortPrice = $request->query('sort_price')) {
-                $query->orderBy('SPrice', $sortPrice);
-            }
+
+            $query->orderByRaw('(SELECT SUM(Mande) FROM AV_KalaSizeColorMande_View WHERE AV_KalaSizeColorMande_View.CodeKala = AV_KalaList_View.Code) DESC');
+
 
             if ($search = $request->query('search')) {
                 $query->where('Name', 'LIKE', "%{$search}%");
@@ -737,13 +760,12 @@ class SubCategories extends Controller
 
             $imageCreation = $query->select([
                 'Pic',
-                'KCode as Code',
                 'ImageCode',
                 'created_at',
+                'Code',
                 'CChangePic',
             ])
                 ->paginate(24, ['*'], 'product_page');
-
 
             DB::transaction(function () use ($imageCreation) {
                 foreach ($imageCreation as $product) {
@@ -764,16 +786,22 @@ class SubCategories extends Controller
                 }
             });
 
+
             $productResult = $query->select([
+                'CodeCompany',
+                'CanSelect',
                 'GCode',
                 'GName',
-                'SGCode as SCode',
-                'SGName as SName',
-                'KCode as Code',
-                'KName as Name',
-                'Vahed',
                 'Comment',
+                'SCode',
+                'SName',
+                'Code',
+                'Name',
+                'Model',
+                'UCode',
+                'Vahed',
                 'KMegdar',
+                'KPrice',
                 'SPrice',
                 'KhordePrice',
                 'OmdePrice',
@@ -782,6 +810,7 @@ class SubCategories extends Controller
                 'CheckPrice',
                 'DForoosh',
                 'CShowInDevice',
+                'CFestival',
                 'GPoint',
                 'KVahed',
                 'PicName'
@@ -1162,8 +1191,8 @@ class SubCategories extends Controller
             return response()->json([
                 'result' => [
                     'products' => $products,
-                    'colors' => $this->list_colors_best_seller('best-seller', 'all'),
-                    'sizes' => $this->list_sizes_best_seller('best-seller', 'all'),
+                    'colors' => $this->list_colors('0', 'all'),
+                    'sizes' => $this->list_sizes('0', 'all'),
                     'prices' => $this->list_prices($products),
                 ],
                 'message' => 'دریافت اطلاعات با موفقیت انجام شد'

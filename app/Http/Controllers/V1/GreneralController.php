@@ -267,36 +267,6 @@ class GreneralController extends Controller
         }
     }
 
-    public function insert_faq(Request $request)
-    {
-        try {
-            $validated = $request->validate([
-                'Type' => 'required|numeric',
-                'Comment' => 'required|min:3',
-                'Title' => 'required|min:3',
-                'Radif' => 'required|numeric',
-                'Code' => 'required|numeric',
-            ]);
-
-            DB::table('DeviceAbout')->insert([
-                'Type' => $request->Type,
-                'Comment' => $request->Comment,
-                'Title' => $request->Title,
-                'Radif' => $request->Radif,
-                'Code' => $request->Code,
-            ]);
-
-            return response()->json([
-                'result' => null,
-                "message" => "درج اطلاعات با موفقیت انجام شد",
-            ], 200);
-        } catch (Exception $e) {
-            return response()->json([
-                'result' => null,
-                'message' => $e->getMessage(),
-            ], 503);
-        }
-    }
 
     public function about_us()
     {
