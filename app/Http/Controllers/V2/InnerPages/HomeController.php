@@ -295,7 +295,9 @@ class HomeController extends Controller
             $query = ProductModel::with(['productSizeColor'])
                 ->where('CodeCompany', $this->active_company)
                 ->where('CShowInDevice', 1)
-                ->orderBy('Code', 'DESC');
+                ->whereHas('productSizeColor', function ($query) {
+                    $query->havingRaw('SUM(Mande) > 0');
+                })->orderBy('Code', 'DESC');
 
 
             $imageCreation = $query->select([
@@ -370,6 +372,9 @@ class HomeController extends Controller
                 ->where('CodeCompany', $this->active_company)
                 ->where('CShowInDevice', 1)
                 ->where('CFestival', 1)
+                ->whereHas('productSizeColor', function ($query) {
+                    $query->havingRaw('SUM(Mande) > 0');
+                })
                 ->orderBy('UCode', 'ASC');
 
 
@@ -444,7 +449,10 @@ class HomeController extends Controller
 
             $query = ProductModel::with(['productSizeColor'])
                 ->where('CodeCompany', $this->active_company)
-                ->where('CShowInDevice', 1);
+                ->where('CShowInDevice', 1)
+                ->whereHas('productSizeColor', function ($query) {
+                    $query->havingRaw('SUM(Mande) > 0');
+                });
 
             $query->orderByRaw('(SELECT SUM(Mande) FROM AV_KalaSizeColorMande_View WHERE AV_KalaSizeColorMande_View.CodeKala = AV_KalaList_View.Code) DESC');
 

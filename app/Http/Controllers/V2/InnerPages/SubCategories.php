@@ -294,7 +294,10 @@ class SubCategories extends Controller
             $query = ProductModel::with(['productSizeColor'])
                 ->where('CodeCompany', $this->active_company)
                 ->where('GCode', $categoryCode)
-                ->where('CShowInDevice', 1);
+                ->where('CShowInDevice', 1)
+                ->whereHas('productSizeColor', function ($query) {
+                    $query->havingRaw('SUM(Mande) > 0');
+                });
 
             $sortPrice = strtolower($request->query('sort_price'));
             if ($request->has('sort_price') && in_array($sortPrice, ['asc', 'desc'])) {
@@ -417,7 +420,10 @@ class SubCategories extends Controller
             $query = ProductModel::with(['productSizeColor'])
                 ->where('CodeCompany', $this->active_company)
                 ->where('SCode', $subcategoryCode)
-                ->where('CShowInDevice', 1);
+                ->where('CShowInDevice', 1)
+                ->whereHas('productSizeColor', function ($query) {
+                    $query->havingRaw('SUM(Mande) > 0');
+                });
 
             if ($sortPrice = $request->query('sort_price')) {
                 $sortPrice = in_array($sortPrice, ['asc', 'desc']) ? $sortPrice : 'asc';
@@ -523,7 +529,10 @@ class SubCategories extends Controller
 
             $query = ProductModel::with(['productSizeColor'])
                 ->where('CodeCompany', $this->active_company)
-                ->where('CShowInDevice', 1);
+                ->where('CShowInDevice', 1)
+                ->whereHas('productSizeColor', function ($query) {
+                    $query->havingRaw('SUM(Mande) > 0');
+                });
 
             if ($sortPrice = $request->query('sort_price')) {
                 $sortPrice = in_array($sortPrice, ['asc', 'desc']) ? $sortPrice : 'asc';
@@ -629,7 +638,10 @@ class SubCategories extends Controller
             $query = ProductModel::with(['productSizeColor'])
                 ->where('CodeCompany', $this->active_company)
                 ->where('CShowInDevice', 1)
-                ->where('CFestival', 1);
+                ->where('CFestival', 1)
+                ->whereHas('productSizeColor', function ($query) {
+                    $query->havingRaw('SUM(Mande) > 0');
+                });
 
 
             if ($sortPrice = $request->query('sort_price')) {
@@ -736,7 +748,10 @@ class SubCategories extends Controller
 
             $query = ProductModel::with(['productSizeColor'])
                 ->where('CodeCompany', $this->active_company)
-                ->where('CShowInDevice', 1);
+                ->where('CShowInDevice', 1)
+                ->whereHas('productSizeColor', function ($query) {
+                    $query->havingRaw('SUM(Mande) > 0');
+                });
 
 
             $query->orderByRaw('(SELECT SUM(Mande) FROM AV_KalaSizeColorMande_View WHERE AV_KalaSizeColorMande_View.CodeKala = AV_KalaList_View.Code) DESC');
