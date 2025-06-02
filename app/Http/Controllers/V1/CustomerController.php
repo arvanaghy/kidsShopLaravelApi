@@ -97,9 +97,9 @@ class CustomerController extends Controller
     {
         $base_url = 'https://webone-sms.ir/SMSInOutBox/SendSms';
         $params = array(
-            'username' => '09354662900',
+            'username' => '09354278334',
             'password' => '414411',
-            'from' => '10002147',
+            'from' => '50002000000133',
             'text' => $text,
             'to' => $phoneNO
         );
@@ -342,7 +342,7 @@ class CustomerController extends Controller
                     $client_sms_text_message = 'کیدزشاپ  ، کد ورود به سیستم ' . $sms_code;
                     $this->send_sms_via_webone($validated['phoneNumber'], $client_sms_text_message);
                     $admin_sms_text_message = 'کاربر جدید با نام ' . $validated['name'] .  ' و شماره تلفن ' . $validated['phoneNumber'] . ' در سیستم ثبت گردید. ';
-                    $this->send_sms_via_webone('09354662900', $admin_sms_text_message);
+                    $this->send_sms_via_webone('09354278334', $admin_sms_text_message);
                     return response()->json([
                         "message" => "ثبت نام با موفقیت انجام پذیرفت  و کد پیام کوتاه برای شما ارسال شد",
                         "result" => null

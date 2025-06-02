@@ -30,7 +30,7 @@ class OrderController extends Controller
     {
         $base_url = 'https://webone-sms.ir/SMSInOutBox/SendSms';
         $params = array(
-            'username' => '09354662900',
+            'username' => '09354278334',
             'password' => '414411',
             'from' => '10002147',
             'text' => $text,
@@ -124,7 +124,7 @@ class OrderController extends Controller
                 $client_text_message = "مشتری گرامی " . $userResult->Name . " پیش فاکتور " . $result->Code . " به مبلغ " . $Sorder->JamKol . " در سیستم ثبت گردید. با تشکر کیدزشاپ";
                 $this->send_sms_via_webone($userResult->Mobile, $client_text_message);
                 $admin_text_message = "پیش فاکتور جدید به شماره " . $result->Code . " به مبلغ " . $Sorder->JamKol .  "برای کاربر" . $userResult->Name .  " در سیستم ثبت گردید.";
-                $this->send_sms_via_webone('09354662900', $admin_text_message);
+                $this->send_sms_via_webone('09354278334', $admin_text_message);
 
                 return response()->json([
                     'message' => 'پیش فاکتور با موفقیت ثبت شد',
