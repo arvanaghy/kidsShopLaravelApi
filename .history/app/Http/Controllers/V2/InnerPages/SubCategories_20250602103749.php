@@ -852,7 +852,7 @@ class SubCategories extends Controller
                 ->join('AV_KalaSizeColorMande_View', 'AV_KalaSizeColorMande_View.CodeKala', '=', 'AV_KalaList_View.Code')
                 ->where('AV_KalaSizeColorMande_View.ColorCode', '!=', null)
                 ->where('AV_KalaSizeColorMande_View.ColorName', '!=', null)
-                ->select('AV_KalaSizeColorMande_View.ColorCode', 'AV_KalaSizeColorMande_View.ColorName', 'AV_KalaSizeColorMande_View.RGB')
+                ->select('AV_KalaSizeColorMande_View.ColorCode', 'AV_KalaSizeColorMande_View.ColorName')
                 ->orderBy('Code', 'DESC');
 
             if ($mode == 'category') {
