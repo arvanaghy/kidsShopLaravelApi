@@ -871,10 +871,11 @@ class SubCategories extends Controller
 
             $colors = [];
             foreach ($products as $product) {
-                if (!is_null($product->ColorCode) && !is_null($product->ColorName)) {
+                if (!is_null($product->ColorCode) && !is_null($product->ColorName) ) {
                     $colors[] = [
                         'ColorCode' => $product->ColorCode,
-                        'ColorName' => $product->ColorName
+                        'ColorName' => $product->ColorName,
+                        'RGB' => $product->RGB
                     ];
                 }
             }
@@ -893,6 +894,26 @@ class SubCategories extends Controller
             ], 500);
         }
     }
+
+    // public function test_it()
+    // {
+    //     try {
+    //         return response()->json([
+    //             'result' => [
+    //                 'result' =>  DB::table('AV_KalaSizeColorMande_View')->orderBy('CodeKala', 'DESC')->paginate(36),
+
+    //                 'colors' => $this->list_colors('0', 'all'),
+
+    //             ],
+    //             'message' => 'دریافت اطلاعات با موفقیت انجام شد'
+    //         ], 200);
+    //     } catch (Exception $e) {
+    //         return response()->json([
+    //             'status' => false,
+    //             'message' => $e->getMessage()
+    //         ], 500);
+    //     }
+    // }
 
     protected function list_sizes($categoryCode, $mode)
     {
@@ -949,7 +970,7 @@ class SubCategories extends Controller
                 ->join('AV_KalaSizeColorMande_View', 'AV_KalaSizeColorMande_View.CodeKala', '=', 'AV_KalaTedadForooshKol_View.KCode')
                 ->where('AV_KalaSizeColorMande_View.ColorCode', '!=', null)
                 ->where('AV_KalaSizeColorMande_View.ColorName', '!=', null)
-                ->select('AV_KalaSizeColorMande_View.ColorCode', 'AV_KalaSizeColorMande_View.ColorName')
+                ->select('AV_KalaSizeColorMande_View.ColorCode', 'AV_KalaSizeColorMande_View.ColorName', 'AV_KalaSizeColorMande_View.RGB')
                 ->orderBy('KMegdar', 'DESC');
 
 

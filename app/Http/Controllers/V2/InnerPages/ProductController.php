@@ -13,51 +13,56 @@ use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Log;
 use Intervention\Image\ImageManagerStatic as Image;
 
-
-
 class ProductController extends Controller
 {
-    protected $active_company = null;
-    protected $financial_period = null;
+    protected $active_company;
+    protected $financial_period;
 
-    protected function CreateProductPath()
+    /**
+     * Initialize directories for product images.
+     */
+    protected function ensureProductPaths(): void
     {
         $paths = [
-            "products-image",
-            "products-image/original",
-            "products-image/webp"
+            public_path('products-image'),
+            public_path('products-image/original'),
+            public_path('products-image/webp'),
         ];
 
         foreach ($paths as $path) {
-            $fullPath = public_path($path);
-            if (!File::isDirectory($fullPath)) {
-                File::makeDirectory($fullPath, 0755, true, true);
+            if (!File::isDirectory($path)) {
+                File::makeDirectory($path, 0755, true);
             }
         }
     }
 
+    /**
+     * Constructor to set up active company and financial period.
+     */
     public function __construct()
     {
         try {
-            $this->CreateProductPath();
+            $this->ensureProductPaths();
+
             $this->active_company = DB::table('Company')
                 ->where('DeviceSelected', 1)
-                ->pluck('Code')
-                ->first();
+                ->value('Code');
 
             if ($this->active_company) {
                 $this->financial_period = DB::table('DoreMali')
                     ->where('CodeCompany', $this->active_company)
                     ->where('DeviceSelected', 1)
-                    ->pluck('Code')
-                    ->first();
+                    ->value('Code');
             }
         } catch (Exception $e) {
-            return response()->json(['status' => false, 'message' => $e->getMessage()], 500);
+            abort(500, $e->getMessage());
         }
     }
 
-    protected function createProductImages($data, $picName): bool
+    /**
+     * Process and save product image as WebP.
+     */
+    protected function processProductImage($data, string $picName): bool
     {
         try {
             $imagePath = public_path("products-image/original/{$picName}.jpg");
@@ -67,203 +72,70 @@ class ProductController extends Controller
 
             Image::configure(['driver' => 'gd']);
             Image::make($imagePath)
-                ->encode('webp', 100)
                 ->resize(250, 250, function ($constraint) {
                     $constraint->aspectRatio();
                     $constraint->upsize();
                 })
+                ->encode('webp', 90)
                 ->save($webpPath);
 
             File::delete($imagePath);
 
             return true;
         } catch (Exception $e) {
-            Log::error("Failed to create product image: {$e->getMessage()}");
+            Log::error("Failed to process product image: {$e->getMessage()}");
             return false;
         }
     }
 
-    protected function cleanupUnusedImages($product, $productImages)
+    /**
+     * Remove unused images from storage.
+     */
+    protected function cleanupUnusedImages($product, $productImages): void
     {
         try {
-            $webpDir = public_path('products-image/webp/' . ceil($product->GCode) . '/' . ceil($product->SCode));
-            $validPicNames = $productImages
-                ->pluck('PicName')
+            $webpDir = public_path("products-image/webp/{$product->GCode}/{$product->SCode}");
+            $validPicNames = $productImages->pluck('PicName')
                 ->filter()
-                ->map(function ($name) {
-                    return $name . '.webp';
-                })
+                ->map(fn($name) => "{$name}.webp")
                 ->toArray();
 
             if (File::isDirectory($webpDir)) {
-                $files = File::files($webpDir);
-                foreach ($files as $file) {
-                    $filename = $file->getFilename();
-                    if (!in_array($filename, $validPicNames)) {
-                        File::delete($file->getPathname());
-                    }
-                }
+                collect(File::files($webpDir))
+                    ->filter(fn($file) => !in_array($file->getFilename(), $validPicNames))
+                    ->each(fn($file) => File::delete($file->getPathname()));
             }
-        } catch (\Exception $e) {
-            return;
-        }
-    }
-
-    public function relatedProducts($GCode, $SCode)
-    {
-        try {
-            $imageResults = ProductModel::where('CodeCompany', $this->active_company)->where('GCode', $GCode)->where('SCode', $SCode)
-                ->where('CShowInDevice', 1)
-                ->select(
-                    'Pic',
-                    'Code',
-                    'created_at',
-                    'GCode',
-                    'ImageCode',
-                    'SCode',
-                    'Code',
-                    'PicName'
-                )
-                ->orderBy('UCode', 'ASC')
-                ->limit(16)
-                ->get();
-
-            foreach ($imageResults as $image) {
-                if ($image->CChangePic == 1 && !empty($image->Pic)) {
-                    $picName = ceil($image->ImageCode) . "_" . $image->created_at->getTimestamp();
-                    $this->CreateProductImages($image, $picName);
-                    DB::table('KalaImage')->where('Code', $image->ImageCode)->update(['PicName' => $picName]);
-                    DB::table('Kala')->where('Code', $image->Code)->update(['CChangePic' => 0]);
-                }
-            }
-
-            return ProductModel::with(['productSizeColor'])->where('CodeCompany', $this->active_company)
-                ->where('CShowInDevice', 1)
-                ->select(
-                    'CodeCompany',
-                    'CanSelect',
-                    'GCode',
-                    'GName',
-                    'Comment',
-                    'SCode',
-                    'SName',
-                    'Code',
-                    'CodeKala',
-                    'Name',
-                    'Model',
-                    'UCode',
-                    'Vahed',
-                    'KMegdar',
-                    'KPrice',
-                    'SPrice',
-                    'KhordePrice',
-                    'OmdePrice',
-                    'HamkarPrice',
-                    'AgsatPrice',
-                    'CheckPrice',
-                    'DForoosh',
-                    'CShowInDevice',
-                    'CFestival',
-                    'GPoint',
-                    'KVahed',
-                    'PicName'
-                )->where('GCode', $GCode)->where('SCode', $SCode)
-                ->orderBy('UCode', 'ASC')
-                ->limit(16)
-                ->get();
         } catch (Exception $e) {
-            return response()->json([
-                'message' => 'Error: ' . $e->getMessage(),
-                'result'  => null,
-            ], 503);
+            Log::warning("Failed to cleanup images: {$e->getMessage()}");
         }
     }
 
-    protected function offerd_products()
+    /**
+     * Update product images if needed.
+     */
+    protected function updateProductImages($images): void
     {
-
-        try {
-            $imageResults = ProductModel::where('CodeCompany', $this->active_company)
-                ->where('CShowInDevice', 1)
-                ->where('CFestival', 1)
-                ->select('Pic', 'ImageCode', 'created_at', 'GCode', 'SCode', 'Code', 'PicName')
-                ->orderBy('UCode', 'ASC')
-                ->limit(16)
-                ->get();
-
-            foreach ($imageResults as $image) {
-                if ($image->CChangePic == 1 && !empty($image->Pic)) {
-                    $picName = ceil($image->ImageCode) . "_" . $image->created_at->getTimestamp();
-                    $this->CreateProductImages($image, $picName);
-                    DB::table('KalaImage')->where('Code', $image->ImageCode)->update(['PicName' => $picName]);
-                    DB::table('Kala')->where('Code', $image->Code)->update(['CChangePic' => 0]);
+        foreach ($images as $image) {
+            if (data_get($image, 'CChangePic') && !empty($image->Pic)) {
+                $picName = ceil($image->ImageCode) . '_' . Carbon::parse($image->created_at)->timestamp;
+                if ($this->processProductImage($image, $picName)) {
+                    DB::transaction(function () use ($image, $picName) {
+                        DB::table('KalaImage')->where('Code', $image->ImageCode)->update(['PicName' => $picName]);
+                        DB::table('Kala')->where('Code', $image->Code)->update(['CChangePic' => 0]);
+                    });
                 }
             }
-
-            return ProductModel::with(['productSizeColor'])->where('CodeCompany', $this->active_company)
-                ->where('CShowInDevice', 1)
-                ->select(
-                    'CodeCompany',
-                    'CanSelect',
-                    'GCode',
-                    'GName',
-                    'Comment',
-                    'SCode',
-                    'SName',
-                    'Code',
-                    'CodeKala',
-                    'Name',
-                    'Model',
-                    'UCode',
-                    'Vahed',
-                    'KMegdar',
-                    'KPrice',
-                    'SPrice',
-                    'KhordePrice',
-                    'OmdePrice',
-                    'HamkarPrice',
-                    'AgsatPrice',
-                    'CheckPrice',
-                    'DForoosh',
-                    'CShowInDevice',
-                    'CFestival',
-                    'GPoint',
-                    'KVahed',
-                    'PicName'
-                )
-                ->where('CFestival', 1)
-                ->orderBy('UCode', 'ASC')
-                ->limit(16)
-                ->get();
-        } catch (Exception $e) {
-            return response()->json([
-                'message' => 'Error: ' . $e->getMessage(),
-                'result'  => null,
-            ], 503);
         }
     }
 
-    public function showProduct(Request $request, $Code)
+    /**
+     * Base query for products.
+     */
+    protected function baseProductQuery(): \Illuminate\Database\Eloquent\Builder
     {
-        try {
-            $product = ProductModel::where('Code', $Code)->firstOrFail();
-
-            $productImages = ProductImagesModel::where('CodeKala', $product->Code)->get();
-
-            foreach ($productImages as $image) {
-                if (!empty($image->Pic) && !empty($image->PicName)) {
-                    $createdAt = Carbon::parse($image->created_at);
-                    $picName = ceil($image->Code) . "_" . $createdAt->getTimestamp();
-                    $this->CreateProductImages($image, $picName);
-                    DB::table('KalaImage')->where('Code', $image->Code)->update(['PicName' => $picName]);
-                }
-            }
-
-            DB::table('Kala')->where('Code', $product->Code)->update(['CChangePic' => 0]);
-
-            $result = ProductModel::with(['productSizeColor', 'productImages' => function ($query) {
-                $query->select('Code', 'PicName', 'Def', 'CodeKala');
-            }])->where('Code', $Code)->select(
+        return ProductModel::where('CodeCompany', $this->active_company)
+            ->where('CShowInDevice', 1)
+            ->select([
                 'CodeCompany',
                 'CanSelect',
                 'GCode',
@@ -290,28 +162,141 @@ class ProductController extends Controller
                 'CFestival',
                 'GPoint',
                 'KVahed',
-            )->first();
+                'PicName'
+            ]);
+    }
 
+    /**
+     * Get related products, excluding the specified product code.
+     */
+    public function relatedProducts($GCode, $SCode, $excludeCode = null)
+    {
+        try {
+            $imageQuery = ProductModel::where('CodeCompany', $this->active_company)
+                ->where('GCode', $GCode)
+                ->where('SCode', $SCode)
+                ->where('CShowInDevice', 1)
+                ->when($excludeCode, fn($query) => $query->where('Code', '!=', $excludeCode))
+                ->select(['Pic', 'ImageCode', 'created_at', 'GCode', 'SCode', 'Code', 'CChangePic', 'PicName'])
+                ->orderBy('UCode', 'ASC')
+                ->limit(16);
+
+            $this->updateProductImages($imageQuery->get());
+
+            return $this->baseProductQuery()
+                ->with(['productSizeColor'])
+                ->where('GCode', $GCode)
+                ->where('SCode', $SCode)
+                ->when($excludeCode, fn($query) => $query->where('Code', '!=', $excludeCode))
+                ->orderBy('UCode', 'ASC')
+                ->limit(16)
+                ->get();
+        } catch (Exception $e) {
+            return response()->json(['message' => $e->getMessage(), 'result' => null], 503);
+        }
+    }
+
+    /**
+     * Get offered (festival) products.
+     */
+    protected function offeredProducts()
+    {
+        try {
+            $imageQuery = ProductModel::where('CodeCompany', $this->active_company)
+                ->where('CShowInDevice', 1)
+                ->where('CFestival', 1)
+                ->select(['Pic', 'ImageCode', 'created_at', 'GCode', 'SCode', 'Code', 'CChangePic', 'PicName'])
+                ->orderBy('UCode', 'ASC')
+                ->limit(16);
+
+            $this->updateProductImages($imageQuery->get());
+
+            return $this->baseProductQuery()
+                ->with(['productSizeColor'])
+                ->where('CFestival', 1)
+                ->orderBy('UCode', 'ASC')
+                ->limit(16)
+                ->get();
+        } catch (Exception $e) {
+            return response()->json(['message' => $e->getMessage(), 'result' => null], 503);
+        }
+    }
+
+    /**
+     * Show a single product with related and offered products.
+     */
+    public function showProduct(Request $request, $code)
+    {
+        try {
+            $product = ProductModel::where('Code', $code)->firstOrFail();
+            $productImages = ProductImagesModel::where('CodeKala', $product->Code)->get();
+
+            foreach ($productImages as $image) {
+                if (!empty($image->Pic) && empty($image->PicName)) {
+                    $picName = ceil($image->Code) . '_' . Carbon::parse($image->created_at)->timestamp;
+                    if ($this->processProductImage($image, $picName)) {
+                        DB::table('KalaImage')->where('Code', $image->Code)->update(['PicName' => $picName]);
+                    }
+                }
+            }
+
+            DB::table('Kala')->where('Code', $product->Code)->update(['CChangePic' => 0]);
+
+            $result = ProductModel::with([
+                'productSizeColor',
+                'productImages' => fn($query) => $query->select('Code', 'PicName', 'Def', 'CodeKala')
+            ])
+                ->where('Code', $code)
+                ->select([
+                    'CodeCompany',
+                    'CanSelect',
+                    'GCode',
+                    'GName',
+                    'Comment',
+                    'SCode',
+                    'SName',
+                    'Code',
+                    'CodeKala',
+                    'Name',
+                    'Model',
+                    'UCode',
+                    'Vahed',
+                    'KMegdar',
+                    'KPrice',
+                    'SPrice',
+                    'KhordePrice',
+                    'OmdePrice',
+                    'HamkarPrice',
+                    'AgsatPrice',
+                    'CheckPrice',
+                    'DForoosh',
+                    'CShowInDevice',
+                    'CFestival',
+                    'GPoint',
+                    'KVahed'
+                ])
+                ->first();
 
             return response()->json([
                 'product' => $result,
-                'relatedProducts' => $this->relatedProducts($result->GCode, $result->SCode),
-                'offeredProducts' => $this->offerd_products(),
-                'message' => 'محصول با موفقیت نمایش داده شد'
+                'relatedProducts' => $this->relatedProducts($result->GCode, $result->SCode, $result->Code),
+                'offeredProducts' => $this->offeredProducts(),
+                'message' => trans('messages.product_displayed_successfully')
             ]);
         } catch (Exception $e) {
             return response()->json(['error' => $e->getMessage()], 500);
         }
     }
 
+    /**
+     * List all products with pagination
+     */
     public function listAllProducts(Request $request)
     {
         try {
+            $productsQuery = $this->baseProductQuery();
 
-            $productsQuery = ProductModel::where('CodeCompany', $this->active_company)
-                ->where('CShowInDevice', 1);
-
-            if ($sortPrice = $request->query('sort_price')) {
+            if ($sortPrice = $request->query('sortPrice')) {
                 $productsQuery->orderBy('SPrice', $sortPrice);
             }
 
@@ -319,66 +304,18 @@ class ProductController extends Controller
                 $productsQuery->where('Name', 'LIKE', "%{$search}%");
             }
 
+            $imageProducts = $productsQuery->clone()
+                ->select(['Pic', 'ImageCode', 'created_at', 'CodeK', 'GCode', 'SCode', 'PicName'])
+                ->paginate(8);
 
-            $imageCreation = $productsQuery->select([
-                'Pic',
-                'ImageCode',
-                'created_at',
-                'GCode',
-                'SCode',
-                'Code',
-                'CChangePic',
-                'PicName'
-            ])
-                ->paginate(24, ['*'], 'product_page');
+            $this->updateProductImages($imageProducts);
 
-            foreach ($imageCreation as $image) {
-                if ($image->CChangePic == 1 && !empty($image->Pic)) {
-                    $createdAt = Carbon::parse($image->created_at);
-                    $picName = ceil($image->ImageCode) . "_" . $createdAt->getTimestamp();
-                    $this->CreateProductImages($image, $picName);
-                    DB::table('KalaImage')->where('Code', $image->ImageCode)->update(['PicName' => $picName]);
-                    DB::table('Kala')->where('Code', $image->Code)->update(['CChangePic' => 0]);
-                }
-            }
-
-            $productResult = $productsQuery->select([
-                'CodeCompany',
-                'CanSelect',
-                'GCode',
-                'GName',
-                'Comment',
-                'SCode',
-                'SName',
-                'Code',
-                'Name',
-                'Model',
-                'UCode',
-                'Vahed',
-                'KMegdar',
-                'KPrice',
-                'SPrice',
-                'KhordePrice',
-                'OmdePrice',
-                'HamkarPrice',
-                'AgsatPrice',
-                'CheckPrice',
-                'DForoosh',
-                'CShowInDevice',
-                'CFestival',
-                'GPoint',
-                'KVahed',
-                'PicName'
-            ])
-                ->paginate(24, ['*'], 'product_page');
-
-            $productResult->appends($request->query());
-
-
+            $products = $productsQuery->with(['productSizeColor'])
+                ->paginate(8, ['*'], 'page');
 
             return response()->json([
-                'products' => $productResult,
-                'message' => 'محصولات با موفقیت نمایش داده شد'
+                'products' => $products,
+                'message' => trans('messages.products_listed_successfully')
             ]);
         } catch (Exception $e) {
             return response()->json(['error' => $e->getMessage()], 500);

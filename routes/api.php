@@ -101,6 +101,8 @@ Route::prefix('v2')->group(function () {
     Route::get('/list-all-offers/', [WebSubCategories::class, 'listAllOffers']);
     Route::get('/list-best-seller/', [WebSubCategories::class, 'listBestSeller']);
     Route::get('/show-product/{Code}', [WebProductController::class, 'showProduct']);
+    // Route::get('test-it', [WebSubCategories::class, 'test_it']);
+
 
     Route::middleware('customerConfirm')->group(function () {
         Route::post('/submit-order', [WebOrderController::class, 'submit_order']);
