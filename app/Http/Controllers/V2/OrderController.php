@@ -3,134 +3,183 @@
 namespace App\Http\Controllers\V2;
 
 use App\Http\Controllers\Controller;
-use App\Models\OrderModel;
-use Illuminate\Http\Request;
 use App\Models\CustomerModel;
+use App\Models\OrderModel;
 use App\Models\ProductModel;
-use Illuminate\Support\Facades\DB;
 use Exception;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 
 class OrderController extends Controller
 {
-    protected $active_company = null;
-    protected $financial_period = null;
+    protected $active_company;
+    protected $financial_period;
 
+    /**
+     * Initialize active company and financial period.
+     */
     public function __construct()
     {
-        $active_company = DB::table('Company')->where('DeviceSelected', 1)->first();
-        if ($active_company) {
-            $this->active_company = $active_company->Code;
-            $active_financial_period = DB::table('DoreMali')->where('CodeCompany', $active_company->Code)->where('DeviceSelected', 1)->first();
-            if ($active_financial_period) {
-                $this->financial_period = $active_financial_period->Code;
+        try {
+            $this->active_company = DB::table('Company')
+                ->where('DeviceSelected', 1)
+                ->value('Code');
+
+            if ($this->active_company) {
+                $this->financial_period = DB::table('DoreMali')
+                    ->where('CodeCompany', $this->active_company)
+                    ->where('DeviceSelected', 1)
+                    ->value('Code');
             }
+
+            if (!$this->active_company || !$this->financial_period) {
+                throw new Exception('Invalid company or financial period configuration.');
+            }
+        } catch (Exception $e) {
+            Log::error("OrderController initialization failed: {$e->getMessage()}");
+            abort(500, trans('messages.server_error'));
         }
     }
 
-    protected function send_sms_via_webone($phoneNO, $text)
-    {
-        $base_url = 'https://webone-sms.ir/SMSInOutBox/SendSms';
-        $params = array(
-            'username' => '09354278334',
-            'password' => '414411',
-            'from' => '10002147',
-            'text' => $text,
-            'to' => $phoneNO
-        );
-        $url = $base_url . '?' . http_build_query($params);
-        $ch = curl_init();
-        curl_setopt($ch, CURLOPT_URL, $url);
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_exec($ch);
-        curl_close($ch);
-    }
-
-    public function submit_order(Request $request)
+    /**
+     * Send SMS via WebOne API.
+     */
+    protected function sendSms(string $phone, string $message): bool
     {
         try {
-            $token = $request->bearerToken();
-            if (!$token or $token == "") {
-                return response()->json([
-                    "message" => "Token نامعتبر میباشد",
-                    "result" => null,
-                ], 505);
-            }
-            $userResult = CustomerModel::where('UToken', $token)->first();
+            $response = Http::get('https://webone-sms.ir/SMSInOutBox/SendSms', [
+                'username' => '09354278334',
+                'password' => '414411',
+                'from' => '10002147',
+                'to'       => $phone,
+                'text'     => $message,
+            ]);
 
-            if (!$userResult) {
+            if ($response->failed()) {
+                throw new Exception('SMS API request failed: ' . $response->body());
+            }
+
+            return true;
+        } catch (Exception $e) {
+            Log::error("SMS sending failed for phone {$phone}: {$e->getMessage()}");
+            return false;
+        }
+    }
+
+    /**
+     * Submit a new order with transaction lock.
+     */
+    public function submitOrder(Request $request)
+    {
+        try {
+            // Validate bearer token
+            $token = $request->bearerToken();
+            if (empty($token)) {
                 return response()->json([
-                    "message" => "کاربری با این توکن یافت نشد",
-                    "result" => null,
+                    'message' => trans('messages.invalid_token'),
+                    'result'  => null,
+                ], 401);
+            }
+
+            // Fetch customer
+            $customer = CustomerModel::where('UToken', $token)->first();
+            if (!$customer) {
+                return response()->json([
+                    'message' => trans('messages.user_not_found'),
+                    'result'  => null,
                 ], 404);
             }
 
-
-            $insertion = OrderModel::create([
-                'CCode' => $userResult->Code,
-                'CodeDoreMali' => $this->financial_period,
-                'Comment' => $request['description'],
-                'CodeKhadamat' => $request['CodeKhadamat'],
-                'MKhadamat' => $request['MKhadamat']
+            // Validate request data
+            $validated = $request->validate([
+                'description'  => 'nullable',
+                'CodeKhadamat' => 'nullable',
+                'MKhadamat'    => 'nullable',
+                'products'     => 'required',
+                'products.*.KCode' => 'required',
+                'products.*.basket' => 'required',
+                'products.*.basket.*.quantity' => 'required',
+                'products.*.basket.*.feature.Mablaq' => 'required',
+                'products.*.basket.*.feature.SizeNum' => 'nullable',
+                'products.*.basket.*.feature.ColorCode' => 'nullable',
             ]);
 
-            if (!$insertion) {
-                return response()->json([
-                    "message" => "خطا در ثبت سفارش",
-                    "result" => null,
-                ], 500);
-            }
+            // Process order within a transaction
+            $order = DB::transaction(function () use ($customer, $validated) {
+                // Create order
+                $order = OrderModel::create([
+                    'CCode'         => $customer->Code,
+                    'CodeDoreMali'  => $this->financial_period,
+                    'Comment'       => $validated['description'],
+                    'CodeKhadamat'  => $validated['CodeKhadamat'],
+                    'MKhadamat'     => $validated['MKhadamat'],
+                ]);
 
-            if ($insertion) {
-                $result = OrderModel::where('CCode', $userResult->Code)->where('CodeDoreMali', $this->financial_period)->orderBy('Code', 'DESC')->first();
-                $total_price = 0;
-                foreach ($request['products'] as $productValue) {
-                    $product = ProductModel::with(['productSizeColor'])->select('Code')->where('Code', $productValue['KCode'])->first();
+                // Insert order items
+                $orderItems = [];
+                foreach ($validated['products'] as $productValue) {
+                    // Verify product exists
+                    $product = ProductModel::where('Code', $productValue['KCode'])->select('Code')->first();
                     if (!$product) {
-                        return response()->json([
-                            "message" => "کالا یافت نشد",
-                            "result" => null,
-                        ], 404);
+                        throw new Exception(trans('messages.product_not_found'));
                     }
 
                     foreach ($productValue['basket'] as $basketValue) {
-                        DB::table('SOrderKala')->insert([
-                            'SCode' => $result->Code,
-                            'KCode' => $productValue['KCode'],
-                            'Tedad' => $basketValue['quantity'],
-                            'Fee' => $basketValue['feature']['Mablaq'],
-                            'KTedad' => 0,
-                            'KMegdar' => 0,
-                            'KFee' => 0,
-                            'DTakhfif' => 0,
-                            'MTakhfif' => 0,
-                            'SizeNum' => $basketValue['feature']['SizeNum'],
-                            'ColorCode' => $basketValue['feature']['ColorCode'],
-                        ]);
+                        $orderItems[] = [
+                            'SCode'      => $order->Code,
+                            'KCode'      => $productValue['KCode'],
+                            'Tedad'      => $basketValue['quantity'],
+                            'Fee'        => $basketValue['feature']['Mablaq'],
+                            'KTedad'     => 0,
+                            'KMegdar'    => 0,
+                            'KFee'       => 0,
+                            'DTakhfif'   => 0,
+                            'MTakhfif'   => 0,
+                            'SizeNum'    => $basketValue['feature']['SizeNum'] ?? null,
+                            'ColorCode'  => $basketValue['feature']['ColorCode'] ?? null,
+                            'created_at' => now(),
+                            'updated_at' => now(),
+                        ];
                     }
                 }
 
-                $Sorder  = DB::table('AV_SOrder_View')->where('Code', $result->Code)->first();
+                // Bulk insert order items
+                DB::table('SOrderKala')->insert($orderItems);
 
-                $client_text_message = "مشتری گرامی " . $userResult->Name . " پیش فاکتور " . $result->Code . " به مبلغ " . $Sorder->JamKol . " در سیستم ثبت گردید. با تشکر کیدزشاپ";
-                $this->send_sms_via_webone($userResult->Mobile, $client_text_message);
-                $admin_text_message = "پیش فاکتور جدید به شماره " . $result->Code . " به مبلغ " . $Sorder->JamKol .  "برای کاربر" . $userResult->Name .  " در سیستم ثبت گردید.";
-                // $this->send_sms_via_webone('09354278334', $admin_text_message);
+                return $order;
+            });
 
-                return response()->json([
-                    'message' => 'پیش فاکتور با موفقیت ثبت شد',
-                    'result' => $result
-                ], 201);
-            } else {
-                return response()->json([
-                    'message' => 'خطا در ثبت پیش فاکتور',
-                    'result' => null
-                ], 401);
-            }
-        } catch (Exception $exception) {
+            // Fetch order details for response
+            $orderDetails = OrderModel::with('items')->where('Code', $order->Code)->first();
+            $totalPrice = DB::table('AV_SOrder_View')->where('Code', $order->Code)->value('JamKol') ?? 0;
+
+            // Send SMS notifications
+            $clientMessage = trans('messages.order_confirmation', [
+                'name' => $customer->Name,
+                'order_code' => $order->Code,
+                'total' => $totalPrice,
+            ]);
+            $this->sendSms($customer->Mobile, $clientMessage);
+
+            $adminMessage = trans('messages.new_order_notification', [
+                'order_code' => $order->Code,
+                'total' => $totalPrice,
+                'name' => $customer->Name,
+            ]);
+            // $this->sendSms('09354278334', $adminMessage);
+
             return response()->json([
-                'message' => $exception->getMessage(),
-                'result' => null
-            ], 503);
+                'message' => trans('messages.order_created_successfully'),
+                'result'  => $orderDetails,
+            ], 201);
+        } catch (Exception $e) {
+            Log::error("Order submission failed: {$e->getMessage()}");
+            return response()->json([
+                'message' => $e->getMessage(),
+                'result'  => null,
+            ], 500);
         }
     }
 }
