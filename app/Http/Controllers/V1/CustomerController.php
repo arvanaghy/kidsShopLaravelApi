@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\Hash;
 use App\Models\CustomerGroupModel;
 use Carbon\Carbon;
 use Exception;
+use App\Services\SmsService;
 
 class CustomerController extends Controller
 {
@@ -40,10 +41,10 @@ class CustomerController extends Controller
     {
         return CustomerModel::where('Code', $customer_id)->where('CodeCompany', $this->active_company)->where('Act', 1)->first();
     }
-    protected function grenerate_token($customer_id, $customer_phonenumber, $request)
+    protected function generate_token($customer_id, $customer_phone_number, $request)
     {
-        $pharse = $customer_id . $customer_phonenumber . time();
-        $token = Hash::make($pharse);
+        $phrase = $customer_id . $customer_phone_number . time();
+        $token = Hash::make($phrase);
         $customer = new CustomerModel;
         $customer->timestamps = false;
         $customer
@@ -69,7 +70,7 @@ class CustomerController extends Controller
         }
     }
 
-    protected function grenerate_sms($customer_id)
+    protected function generate_sms($customer_id)
     {
         $now = Carbon::now();
 
@@ -98,8 +99,8 @@ class CustomerController extends Controller
         $base_url = 'https://webone-sms.ir/SMSInOutBox/SendSms';
         $params = array(
             'username' => '09354278334',
-            'password' => '414411',
-            'from' => '50002000000133',
+            'password' => '84332',
+            'from' => '10002147',
             'text' => $text,
             'to' => $phoneNO
         );
@@ -107,7 +108,6 @@ class CustomerController extends Controller
         $ch = curl_init();
         curl_setopt($ch, CURLOPT_URL, $url);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-
         curl_exec($ch);
         curl_close($ch);
     }
@@ -116,14 +116,13 @@ class CustomerController extends Controller
     {
         try {
             $validated = $request->validate([
-                'phoneNumber' => 'required|min:10|regex:/^09[0-9]{9}$/',
+                'phone_number' => 'required|regex:/^09[0-9]{9}$/',
             ], [
-                'phoneNumber.regex' => 'شماره تلفن وارد شده صحیح نیست',
-                'phoneNumber.min' => 'شماره تلفن وارد شده صحیح نیست',
-                'phoneNumber.required' => 'شماره تلفن ضروری است',
+                'phone_number.regex' => 'شماره تلفن وارد شده صحیح نیست',
+                'phone_number.required' => 'شماره تلفن ضروری است',
             ]);
 
-            $result = CustomerModel::where('Mobile', $validated['phoneNumber'])->where('CodeCompany', $this->active_company)
+            $result = CustomerModel::where('Mobile', $validated['phone_number'])->where('CodeCompany', $this->active_company)
                 ->first();
             if ($result) {
                 if ($this->is_user_active($result['Code'])) {
@@ -133,12 +132,15 @@ class CustomerController extends Controller
                             "result" => $result
                         ], 201);
                     } else {
-                        $my_sms = $this->grenerate_sms($result['Code']);
+                        $my_sms = $this->generate_sms($result['Code']);
                         $sms_text_message = 'کیدزشاپ ، کد ورود به سیستم ' . $my_sms;
-                        $this->send_sms_via_webone($validated['phoneNumber'], $sms_text_message);
+                        // $smsService = new SmsService($validated['phone_number'], $sms_text_message);
+                        // $smsResult = $smsService->send();
+                        $this->send_sms_via_webone($validated['phone_number'], $sms_text_message);
+
                         return response()->json([
-                            "message" => 'کد پیام کوتاه برای شما ارسال شد',
-                            "result" => $my_sms,
+                            "message" => 'کد ورود به سیستم ارسال شد',
+                            "result" => null
                         ], 202);
                     }
                 } else {
@@ -166,21 +168,21 @@ class CustomerController extends Controller
     {
         try {
             $validated = $request->validate([
-                'phoneNumber' => 'required|min:10|regex:/^09[0-9]{9}$/',
+                'phone_number' => 'required|min:10|regex:/^09[0-9]{9}$/',
                 'sms' => 'required|size:4'
             ], [
                 'sms.size' => 'کد وارد شده صحیح نیست',
                 'sms.required' => 'کد وارد شده صحیح نیست',
-                'phoneNumber.regex' => 'شماره تلفن وارد شده صحیح نیست',
-                'phoneNumber.min' => 'شماره تلفن وارد شده صحیح نیست',
-                'phoneNumber.required' => 'شماره تلفن ضروری است',
+                'phone_number.regex' => 'شماره تلفن وارد شده صحیح نیست',
+                'phone_number.min' => 'شماره تلفن وارد شده صحیح نیست',
+                'phone_number.required' => 'شماره تلفن ضروری است',
             ]);
-            $result = CustomerModel::where('Mobile', $validated['phoneNumber'])->where('CodeCompany', $this->active_company)
+            $result = CustomerModel::where('Mobile', $validated['phone_number'])->where('CodeCompany', $this->active_company)
                 ->where('SMSCode', $validated['sms'])->where('SMSTime', '>=', now())->first();
 
             if ($result) {
-                $token =  $this->grenerate_token($result['Code'], $result['Mobile'], $request);
-                $reResult = CustomerModel::where('Mobile', $validated['phoneNumber'])->where('CodeCompany', $this->active_company)->where('UToken', $token)->first();
+                $token =  $this->generate_token($result['Code'], $result['Mobile'], $request);
+                $reResult = CustomerModel::where('Mobile', $validated['phone_number'])->where('CodeCompany', $this->active_company)->where('UToken', $token)->first();
                 if ($reResult) {
                     return response()->json([
                         "message" => " ورود به سیستم با موفقیت انجام پذیرفت",
@@ -262,12 +264,12 @@ class CustomerController extends Controller
 
         try {
             $validated = $request->validate([
-                'phoneNumber' => 'required|min:10',
+                'phone_number' => 'required|min:10',
                 'name' => 'required|min:3',
                 'Address' => 'required',
             ], [
-                'phoneNumber.required' => 'شماره تلفن را وارد کنید',
-                'phoneNumber.min' => 'شماره تلفن باید بیشتر از 10 رقم باشد',
+                'phone_number.required' => 'شماره تلفن را وارد کنید',
+                'phone_number.min' => 'شماره تلفن باید بیشتر از 10 رقم باشد',
                 'name.required' => 'نام را وارد کنید',
                 'name.min' => 'نام باید بیشتر از 3 کاراکتر باشد',
                 'Address.required' => 'لطفا آدرس را وارد کنید',
@@ -295,7 +297,7 @@ class CustomerController extends Controller
                     $customer_group_code = $customer_groupCode;
                 }
                 // handle customer registeration
-                $isUserExist = CustomerModel::where('Mobile', $validated['phoneNumber'])->first();
+                $isUserExist = CustomerModel::where('Mobile', $validated['phone_number'])->first();
                 if ($isUserExist) {
                     return response()->json([
                         "message" => "کاربری با این شماره همراه قبلا در سیستم ثبت شده است",
@@ -312,7 +314,7 @@ class CustomerController extends Controller
                         'PayerType' => 0,
                         'CodeCustomer' => (int)$customerCode,
                         'Name' => $validated['name'],
-                        'Mobile' => $validated['phoneNumber'],
+                        'Mobile' => $validated['phone_number'],
                         'Address' => (string)$request['Address'],
                         'Etebar' => 0,
                         'EtebarCheck' => 0,
@@ -340,9 +342,10 @@ class CustomerController extends Controller
                     ]);
 
                     $client_sms_text_message = 'کیدزشاپ  ، کد ورود به سیستم ' . $sms_code;
-                    $this->send_sms_via_webone($validated['phoneNumber'], $client_sms_text_message);
-                    $admin_sms_text_message = 'کاربر جدید با نام ' . $validated['name'] .  ' و شماره تلفن ' . $validated['phoneNumber'] . ' در سیستم ثبت گردید. ';
-                    $this->send_sms_via_webone('09354278334', $admin_sms_text_message);
+                    $admin_sms_text_message = 'کاربر جدید با نام ' . $validated['name'] .  ' و شماره تلفن ' . $validated['phone_number'] . ' در سیستم ثبت گردید. ';
+                    $smsService = new SmsService($validated['phone_number'], $client_sms_text_message, true,  $admin_sms_text_message);
+                    $smsService->send();
+
                     return response()->json([
                         "message" => "ثبت نام با موفقیت انجام پذیرفت  و کد پیام کوتاه برای شما ارسال شد",
                         "result" => null
@@ -368,10 +371,10 @@ class CustomerController extends Controller
             $now = Carbon::now();
 
             $validated = $request->validate([
-                'phoneNumber' => 'required|min:10|regex:/^09[0-9]{9}$/',
+                'phone_number' => 'required|min:10|regex:/^09[0-9]{9}$/',
             ]);
 
-            $result = CustomerModel::where('Mobile', $validated['phoneNumber'])->where('CodeCompany', $this->active_company)
+            $result = CustomerModel::where('Mobile', $validated['phone_number'])->where('CodeCompany', $this->active_company)
                 ->first();
             if ($result) {
                 if ($this->is_user_active($result['Code'])) {
@@ -381,13 +384,16 @@ class CustomerController extends Controller
                             "result" => null
                         ], 401);
                     } else {
-                        $my_sms = $this->grenerate_sms($result['Code']);
+                        $my_sms = $this->generate_sms($result['Code']);
                         $sms_text_message = 'کیدزشاپ  ، کد ورود به سیستم ' . $my_sms;
-                        $this->send_sms_via_webone($validated['phoneNumber'], $sms_text_message);
-                        return response()->json([
-                            "message" => 'کد پیام کوتاه برای شما ارسال شد',
-                            "result" => null
-                        ], 202);
+                        $smsService = new SmsService($validated['phone_number'], $sms_text_message);
+                        $result = $smsService->send();
+                        if ($result['status'] == 'success') {
+                            return response()->json([
+                                "message" => $result['message'],
+                                "result" => null
+                            ], 202);
+                        }
                     }
                 } else {
                     return response()->json([

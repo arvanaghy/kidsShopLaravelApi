@@ -7,7 +7,7 @@ use App\Http\Controllers\V1\InvoiceController;
 use App\Http\Controllers\V1\ProductController;
 use App\Http\Controllers\V1\CategoryController;
 use App\Http\Controllers\V1\CustomerController;
-use App\Http\Controllers\V1\GreneralController;
+use App\Http\Controllers\V1\GeneralController;
 use App\Http\Controllers\V1\WebPaymentController;
 
 use App\Http\Controllers\V2\InnerPages\HomeController as WebHomeController;
@@ -34,25 +34,25 @@ use App\Http\Controllers\V2\OrderController as WebOrderController;
 Route::prefix('v1')->group(function () {
 
     Route::get('/reset-images', [ProductController::class, 'resetImages']);
-    Route::get('/online', [GreneralController::class, 'online']);
-    Route::get('/faq', [GreneralController::class, 'faq']);
+    Route::get('/online', [GeneralController::class, 'online']);
+    Route::get('/faq', [GeneralController::class, 'faq']);
 
-    Route::get('/about-us', [GreneralController::class, 'about_us']);
+    Route::get('/about-us', [GeneralController::class, 'about_us']);
     Route::post('/login', [CustomerController::class, 'login']);
     Route::post('/register', [CustomerController::class, 'register']);
     Route::post('/verify-sms', [CustomerController::class, 'verify_sms']);
     Route::post('/resend-sms', [CustomerController::class, 'resend_sms']);
     Route::post('/verify-token', [CustomerController::class, 'verify_token']);
-    Route::get('/check-online-payment-available', [GreneralController::class, 'checkOnlinePaymentAvailable']);
+    Route::get('/check-online-payment-available', [GeneralController::class, 'checkOnlinePaymentAvailable']);
     Route::get('/checkout-with-order', [WebPaymentController::class, 'checkoutWithOrder']);
     Route::get('/checkout-without-order', [WebPaymentController::class, 'checkoutWithoutOrder']);
     Route::get('/checkout-with-order-mobile', [WebPaymentController::class, 'checkoutWithOrderMobile']);
     Route::get('/checkout-without-order-mobile', [WebPaymentController::class, 'checkoutWithoutOrderMobile']);
     Route::get('/list-categories', [CategoryController::class, 'list_categories']);
-    Route::get('/offerd-products', [ProductController::class, 'offerd_products']);
+    Route::get('/offered-products', [ProductController::class, 'offered_products']);
     Route::get('/list-latest-products', [ProductController::class, 'list_latest_products']);
     Route::get('/show-product/{Code}', [ProductController::class, 'show_product']);
-    Route::post('/contact-us', [GreneralController::class, 'contact_us']);
+    Route::post('/contact-us', [GeneralController::class, 'contact_us']);
     Route::get('/list-subcategories/{Code}', [CategoryController::class, 'list_subcategories']);
     Route::get('/search-category-by-code/{Code}', [CategoryController::class, 'search_category_by_code']);
     Route::get('/search-subcategory-by-code/{Code}', [CategoryController::class, 'search_subcategory_by_code']);
@@ -67,8 +67,8 @@ Route::prefix('v1')->group(function () {
     Route::get('/list-subcategory-products-for-website-with-PCode/{ProducteCode}/{sortType}', [ProductController::class, 'list__subcategory_products_for_website_with_PCode']);
     Route::get('/list-category-products-for-website/{categoryCode}/{sortType}', [ProductController::class, 'list__category_products_for_website']);
     Route::get('/search/{SearchPhrase}', [ProductController::class, 'search_products']);
-    Route::get('/banners', [GreneralController::class, 'fetchBanners']);
-    Route::get('/list-transfer-services', [GreneralController::class, 'list_transfer_services']);
+    Route::get('/banners', [GeneralController::class, 'fetchBanners']);
+    Route::get('/list-transfer-services', [GeneralController::class, 'list_transfer_services']);
     Route::get('/best-seller', [ProductController::class, 'bestSeller']);
     Route::get('/same-price/{Code}', [ProductController::class, 'samePrice']);
     Route::get('/customer-category/{Code}', [CustomerController::class, 'customerCategory']);
@@ -84,13 +84,14 @@ Route::prefix('v1')->group(function () {
         Route::get('/list-unverified-orders', [InvoiceController::class, 'list_unverified_orders']);
         Route::get('/list-unverified-orders-products/{order}', [InvoiceController::class, 'list_unverified_orders_products']);
         Route::get('/account-balance', [InvoiceController::class, 'account_balance']);
-        Route::post('/edit-user-info', [GreneralController::class, 'edit_user_info']);
+        Route::post('/edit-user-info', [GeneralController::class, 'edit_user_info']);
         Route::post('/submit-order', [OrderController::class, 'submit_order']);
     });
 });
 
 
 Route::prefix('v2')->group(function () {
+    Route::get('/company-info', [WebGeneralController::class, 'companyInfo']);
     Route::get('/top-menu', [WebGeneralController::class, 'topMenu']);
     Route::get('/home-page', [WebHomeController::class, 'homePage']);
     Route::get('/reset-images', [WebHomeController::class, 'resetCChangePic']);
@@ -101,8 +102,6 @@ Route::prefix('v2')->group(function () {
     Route::get('/list-all-offers/', [WebSubCategories::class, 'listAllOffers']);
     Route::get('/list-best-seller/', [WebSubCategories::class, 'listBestSeller']);
     Route::get('/show-product/{Code}', [WebProductController::class, 'showProduct']);
-    // Route::get('test-it', [WebSubCategories::class, 'test_it']);
-
 
     Route::middleware('customerConfirm')->group(function () {
         Route::post('/submit-order', [WebOrderController::class, 'submit_order']);

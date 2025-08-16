@@ -32,6 +32,8 @@ class GeneralController extends Controller
         }
     }
 
+
+
     public function __construct(Request $request)
     {
         try {
@@ -128,6 +130,17 @@ class GeneralController extends Controller
                 'status' => false,
                 'message' => $e->getMessage()
             ], 500);
+        }
+    }
+
+
+    public function companyInfo()
+    {
+        try {
+            $companyInfo = DB::table('Company')->where('DeviceSelected', 1)->first();
+            return response()->json(['status' => true, 'company_info' => $companyInfo], 200);
+        } catch (Exception $e) {
+            return response()->json(['status' => false, 'message' => $e->getMessage()], 500);
         }
     }
 }

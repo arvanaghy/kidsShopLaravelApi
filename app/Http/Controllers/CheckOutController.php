@@ -70,7 +70,7 @@ class CheckOutController extends Controller
                     // update WebPaymentModel
                     $paymentResult->UUID = $result['data']['ref_id'];
                     $paymentResult->save();
-                    // create PaymentModel                  
+                    // create PaymentModel
 
                     PaymentsModel::create([
                         'Code' => (float)$code + 1,
@@ -136,7 +136,7 @@ class CheckOutController extends Controller
                     // update WebPaymentModel
                     $paymentResult->UUID = $result['data']['ref_id'];
                     $paymentResult->save();
-                    // create PaymentModel                  
+                    // create PaymentModel
 
                     PaymentsModel::create([
                         'Code' => (float)$code + 1,

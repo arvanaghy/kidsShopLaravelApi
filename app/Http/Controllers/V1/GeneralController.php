@@ -11,7 +11,7 @@ use Illuminate\Support\Facades\File;
 use Intervention\Image\ImageManagerStatic as Image;
 
 
-class GreneralController extends Controller
+class GeneralController extends Controller
 {
     protected $active_company = null;
     protected $financial_period = null;
@@ -336,6 +336,6 @@ class GreneralController extends Controller
                 'result' => null,
                 'message' => $e->getMessage(),
             ], 503);
-        }   
+        }
     }
 }

@@ -166,7 +166,7 @@ class ProductController extends Controller
         }
     }
 
-    public function offerd_products()
+    public function offered_products()
     {
 
         try {

@@ -313,6 +313,8 @@ class SubCategories extends Controller
 
             $search = $request->query('search');
             if ($request->has('search') && $request->query('search') != '') {
+                // replace 'ی' with 'ي'
+                $search = str_replace('ی', 'ي', $search);
                 $query->where('Name', 'LIKE', "%{$search}%");
             }
 
@@ -437,6 +439,7 @@ class SubCategories extends Controller
             }
 
             if ($search = $request->query('search')) {
+                $search = str_replace('ی', 'ي', $search);
                 $query->where('Name', 'LIKE', "%{$search}%");
             }
             if ($size = $request->query('size')) {
@@ -546,6 +549,7 @@ class SubCategories extends Controller
             }
 
             if ($search = $request->query('search')) {
+                $search = str_replace('ی', 'ي', $search);
                 $query->where('Name', 'LIKE', "%{$search}%");
             }
             if ($size = $request->query('size')) {
@@ -656,6 +660,7 @@ class SubCategories extends Controller
             }
 
             if ($search = $request->query('search')) {
+                $search = str_replace('ی', 'ي', $search);
                 $query->where('Name', 'LIKE', "%{$search}%");
             }
             if ($size = $request->query('size')) {
@@ -758,6 +763,7 @@ class SubCategories extends Controller
 
 
             if ($search = $request->query('search')) {
+                $search = str_replace('ی', 'ي', $search);
                 $query->where('Name', 'LIKE', "%{$search}%");
             }
             if ($size = $request->query('size')) {
@@ -871,7 +877,7 @@ class SubCategories extends Controller
 
             $colors = [];
             foreach ($products as $product) {
-                if (!is_null($product->ColorCode) && !is_null($product->ColorName) ) {
+                if (!is_null($product->ColorCode) && !is_null($product->ColorName)) {
                     $colors[] = [
                         'ColorCode' => $product->ColorCode,
                         'ColorName' => $product->ColorName,
@@ -894,26 +900,6 @@ class SubCategories extends Controller
             ], 500);
         }
     }
-
-    // public function test_it()
-    // {
-    //     try {
-    //         return response()->json([
-    //             'result' => [
-    //                 'result' =>  DB::table('AV_KalaSizeColorMande_View')->orderBy('CodeKala', 'DESC')->paginate(36),
-
-    //                 'colors' => $this->list_colors('0', 'all'),
-
-    //             ],
-    //             'message' => 'دریافت اطلاعات با موفقیت انجام شد'
-    //         ], 200);
-    //     } catch (Exception $e) {
-    //         return response()->json([
-    //             'status' => false,
-    //             'message' => $e->getMessage()
-    //         ], 500);
-    //     }
-    // }
 
     protected function list_sizes($categoryCode, $mode)
     {
