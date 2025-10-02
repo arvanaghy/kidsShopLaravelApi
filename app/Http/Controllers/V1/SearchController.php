@@ -67,7 +67,13 @@ class SearchController extends Controller
 
         File::put(public_path($imagePath), $data->Pic);
         Image::configure(['driver' => 'gd']);
-        Image::make($imagePath)->encode('webp', 80)->resize(250, 250)->save($webpPath, 100);
+        Image::make($imagePath)
+            ->resize(1200, 1600, function ($constraint) {
+                $constraint->aspectRatio();
+                $constraint->upsize();
+            })
+            ->encode('webp', 100)
+            ->save($webpPath);
         File::delete(public_path($imagePath));
     }
 

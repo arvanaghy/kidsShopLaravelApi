@@ -125,9 +125,9 @@ class GeneralController extends Controller
 
             CustomerModel::where('UToken', $token)->where('CodeCompany', $this->active_company)->update([
                 'Address' => $validated['Address'],
-                'CTitle' => $request['Job'],
-                'StorName' => $request['Company'],
-                'Tel' => $request['Phone'],
+                'CTitle' => '',
+                'StorName' => '',
+                'Tel' => '',
                 'Name' => $validated['Name'],
             ]);
 
@@ -327,11 +327,10 @@ class GeneralController extends Controller
 
 
 
-    public function home_page(){
+    public function home_page()
+    {
         try {
-
-
-        }catch (Exception $e) {
+        } catch (Exception $e) {
             return response()->json([
                 'result' => null,
                 'message' => $e->getMessage(),

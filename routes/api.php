@@ -15,8 +15,7 @@ use App\Http\Controllers\V2\InnerPages\SubCategories as WebSubCategories;
 use App\Http\Controllers\V2\InnerPages\CategoriesController as WebCategoriesController;
 use App\Http\Controllers\V2\InnerPages\GeneralController as WebGeneralController;
 use App\Http\Controllers\V2\InnerPages\ProductController as WebProductController;
-use App\Http\Controllers\V2\OrderController as WebOrderController;
-
+use App\Http\Controllers\V2\OrderAndPaymentController as WebOrderAndPaymentController;
 
 
 
@@ -64,7 +63,7 @@ Route::prefix('v1')->group(function () {
     Route::get('/list-products', [ProductController::class, 'list_products']);
     Route::get('/list-products-for-website/{sortType}', [ProductController::class, 'list_products_for_website']);
     Route::get('/list-subcategory-products-for-website/{subcategoryCode}/{sortType}', [ProductController::class, 'list__subcategory_products_for_website']);
-    Route::get('/list-subcategory-products-for-website-with-PCode/{ProducteCode}/{sortType}', [ProductController::class, 'list__subcategory_products_for_website_with_PCode']);
+    Route::get('/list-subcategory-products-for-website-with-PCode/{ProductCode}/{sortType}', [ProductController::class, 'list__subcategory_products_for_website_with_PCode']);
     Route::get('/list-category-products-for-website/{categoryCode}/{sortType}', [ProductController::class, 'list__category_products_for_website']);
     Route::get('/search/{SearchPhrase}', [ProductController::class, 'search_products']);
     Route::get('/banners', [GeneralController::class, 'fetchBanners']);
@@ -92,6 +91,7 @@ Route::prefix('v1')->group(function () {
 
 Route::prefix('v2')->group(function () {
     Route::get('/company-info', [WebGeneralController::class, 'companyInfo']);
+    Route::get('/currency-unit', [WebGeneralController::class, 'currencyUnit']);
     Route::get('/top-menu', [WebGeneralController::class, 'topMenu']);
     Route::get('/home-page', [WebHomeController::class, 'homePage']);
     Route::get('/reset-images', [WebHomeController::class, 'resetCChangePic']);
@@ -104,6 +104,7 @@ Route::prefix('v2')->group(function () {
     Route::get('/show-product/{Code}', [WebProductController::class, 'showProduct']);
 
     Route::middleware('customerConfirm')->group(function () {
-        Route::post('/submit-order', [WebOrderController::class, 'submit_order']);
+        Route::post('/update-user-address', [CustomerController::class, 'updateUserAddress']);
+        Route::post('/process-order-and-payment', [WebOrderAndPaymentController::class, 'process']);
     });
 });

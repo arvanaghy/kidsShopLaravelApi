@@ -19,6 +19,7 @@ class ProductSizeColorModel extends Model
         'ColorCode',
         'ColorName',
         'Mande',
-        'Mablag'
+        'Mablag',
+        'RGB'
     ];
 }

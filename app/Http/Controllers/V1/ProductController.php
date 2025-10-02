@@ -66,7 +66,13 @@ class ProductController extends Controller
 
         File::put(public_path($imagePath), $data->Pic);
         Image::configure(['driver' => 'gd']);
-        Image::make($imagePath)->encode('webp', 100)->resize(250, 250)->save($webpPath, 100);
+        Image::make($imagePath)
+            ->resize(1200, 1600, function ($constraint) {
+                $constraint->aspectRatio();
+                $constraint->upsize();
+            })
+            ->encode('webp', 100)
+            ->save($webpPath);
         File::delete(public_path($imagePath));
     }
 
@@ -786,7 +792,7 @@ class ProductController extends Controller
         }
     }
 
-    public function list__subcategory_products_for_website_with_PCode(Request $request, $ProducteCode, $sortType)
+    public function list__subcategory_products_for_website_with_PCode(Request $request, $ProductCode, $sortType)
     {
         try {
             $userResult = null;
@@ -869,7 +875,7 @@ class ProductController extends Controller
                     break;
             }
 
-            $product = ProductModel::select('SCode')->where('CodeCompany', $this->active_company)->where('Code', $ProducteCode)->firstOrFail();
+            $product = ProductModel::select('SCode')->where('CodeCompany', $this->active_company)->where('Code', $ProductCode)->firstOrFail();
             $imageCreation = ProductModel::select('Pic', 'ImageCode', 'created_at', 'GCode', 'SCode', 'Code', 'CChangePic', 'PicName')->where('CodeCompany', $this->active_company)->where('SCode', $product->SCode)->where('CShowInDevice', 1)->orderBy($SField, $SType)->paginate(12);
             foreach ($imageCreation as $image) {
                 if ($image->CChangePic == 1) {

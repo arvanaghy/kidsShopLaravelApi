@@ -11,12 +11,11 @@ class OrderModel extends Model
 
     protected $table = "SOrder";
 
-    protected $fillable = [
-        'CodeDoreMali',
-        'CCode',
-        'Signature',
-        'CodeKhadamat',
-        'MKhadamat',
-        'Comment'
-    ];
+    protected $primaryKey = 'Code';
+
+    public $incrementing = true;
+
+    public $timestamps = false;
+
+    protected $fillable = ['Code', 'CCode', 'CodeDoreMali', 'CodeKhadamat', 'MKhadamat', 'Comment', 'status'];
 }

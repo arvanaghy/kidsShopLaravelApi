@@ -67,7 +67,7 @@ class WebPaymentController extends Controller
 
                     if ($err) {
                         return response()->json(['message' => '
-                            خطا در ارتباط  با زرین پال 
+                            خطا در ارتباط  با زرین پال
                             ' .  $err, 'result' => null], 500);
                     } else {
                         if (empty($result['errors'])) {
@@ -257,7 +257,7 @@ class WebPaymentController extends Controller
 
                     if ($err) {
                         return response()->json(['message' => '
-                        خطا در ارتباط  با زرین پال 
+                        خطا در ارتباط  با زرین پال
                         ' .  $err, 'result' => null], 500);
                     } else {
                         if (empty($result['errors'])) {

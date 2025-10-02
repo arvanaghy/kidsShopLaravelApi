@@ -5,6 +5,7 @@ namespace App\Http\Controllers\V2\InnerPages;
 use App\Http\Controllers\Controller;
 use App\Models\BestSellModel;
 use App\Models\CategoryModel;
+use App\Models\ProductImagesModel;
 use Illuminate\Http\Request;
 use App\Models\ProductModel;
 use Illuminate\Support\Facades\DB;
@@ -128,10 +129,13 @@ class HomeController extends Controller
         File::put($imagePath, $data->Pic);
 
         Image::configure(['driver' => 'gd']);
-        Image::make($imagePath)->encode('webp', 100)->resize(250, 250, function ($constraint) {
-            $constraint->aspectRatio();
-            $constraint->upsize();
-        })->save($webpPath);
+        Image::make($imagePath)
+            ->resize(1200, 1600, function ($constraint) {
+                $constraint->aspectRatio();
+                $constraint->upsize();
+            })
+            ->encode('webp', 100)
+            ->save($webpPath);
 
         File::delete($imagePath);
     }
@@ -246,12 +250,14 @@ class HomeController extends Controller
     public function resetCChangePic()
     {
         try {
-            $update = DB::table('Kala')->where('CodeCompany', $this->active_company)->update(['CChangePic' => 1]);
+            $updateCChangePic = DB::table('Kala')->where('CodeCompany', $this->active_company)->update(['CChangePic' => 1]);
+            $updatePicName = ProductImagesModel::where('PicName', '!=', null)->update(['PicName' => null]);
             return response()->json([
                 'result' =>
                 [
                     'message' => 'CChangePic updated successfully',
-                    'rowsEffectedCount' => $update,
+                    'rowsEffectedCountChangePic' => $updateCChangePic,
+                    'rowsEffectedCountPicName' => $updatePicName
                 ]
             ], 200);
         } catch (Exception $e) {
@@ -272,11 +278,11 @@ class HomeController extends Controller
 
             Image::configure(['driver' => 'gd']);
             Image::make($imagePath)
-                ->encode('webp', 100)
-                ->resize(250, 250, function ($constraint) {
+                ->resize(1200, 1600, function ($constraint) {
                     $constraint->aspectRatio();
                     $constraint->upsize();
                 })
+                ->encode('webp', 100)
                 ->save($webpPath);
 
             File::delete($imagePath);
@@ -365,50 +371,73 @@ class HomeController extends Controller
         }
     }
 
-    protected function offerd_products()
+    protected function processProductImage($data, string $picName): bool
+    {
+        try {
+            $imagePath = public_path("products-image/original/{$picName}.jpg");
+            $webpPath = public_path("products-image/webp/{$picName}.webp");
+
+            File::put($imagePath, $data->Pic);
+
+            Image::configure(['driver' => 'gd']);
+            Image::make($imagePath)
+                ->resize(1200, 1600, function ($constraint) {
+                    $constraint->aspectRatio();
+                    $constraint->upsize();
+                })
+                ->encode('webp', 100)
+                ->save($webpPath);
+
+            File::delete($imagePath);
+            return true;
+        } catch (Exception $e) {
+            Log::error("Failed to process product image: {$e->getMessage()}");
+            return false;
+        }
+    }
+
+    protected function offered_products()
     {
 
         try {
             $query = ProductModel::with(['productSizeColor'])
                 ->where('CodeCompany', $this->active_company)
-                ->where('CShowInDevice', 1);
+                ->where('CShowInDevice', 1)
                 // ->where('CFestival', 1)
-                // ->whereHas('productSizeColor', function ($query) {
-                //     $query->havingRaw('SUM(Mande) > 0');
-                // })
-                // ->orderBy('UCode', 'ASC');
+                ->whereHas('productSizeColor', function ($query) {
+                    $query->havingRaw('SUM(Mande) > 0');
+                })
+                ->orderBy('UCode', 'ASC');
 
 
 
-            $imageCreation = $query->select([
-                'Pic',
-                'ImageCode',
+            $products = $query->select([
                 'created_at',
                 'Code',
-                'CChangePic',
-            ])->limit(8)->get();
+            ])->with(['productImages' => function ($query) {
+                $query->select('CodeKala', 'Pic');
+            }])->limit(8)->get();
 
-            DB::transaction(function () use ($imageCreation) {
-                foreach ($imageCreation as $product) {
-                    if ($product->CChangePic == 1 && !empty($product->Pic)) {
+            DB::transaction(function () use ($products) {
+                foreach ($products as $product) {
+                    if (!empty($product->productImages)) {
                         $createdAt = Carbon::parse($product->created_at);
-                        $picName = "{$product->ImageCode}_{$createdAt->getTimestamp()}";
-
-                        if ($this->createProductImages($product, $picName)) {
-                            DB::table('KalaImage')
-                                ->where('Code', $product->ImageCode)
-                                ->update(['PicName' => $picName]);
-
-                            DB::table('Kala')
-                                ->where('Code', $product->Code)
-                                ->update(['CChangePic' => 0]);
+                        foreach ($product->productImages as $image) {
+                            if (!empty($image->Pic)) {
+                                $picName = ceil($image->Code) . '_' . $createdAt->timestamp;
+                                if ($this->processProductImage($image, $picName)) {
+                                    DB::table('KalaImage')
+                                        ->where('Code', $image->Code)
+                                        ->update(['PicName' => $picName]);
+                                }
+                            }
                         }
                     }
                 }
             });
 
 
-            return $query->select([
+            $result = $query->select([
                 'CodeCompany',
                 'CanSelect',
                 'GCode',
@@ -435,7 +464,12 @@ class HomeController extends Controller
                 'GPoint',
                 'KVahed',
                 'PicName'
-            ])->limit(8)->get();
+            ])->with(['productImages' => function ($query) {
+                $query->select('CodeKala', 'PicName', 'Def');
+            }])->limit(8)->get();
+
+
+            return $result;
         } catch (Exception $e) {
             return response()->json([
                 'message' => 'Error: ' . $e->getMessage(),
@@ -450,10 +484,10 @@ class HomeController extends Controller
 
             $query = ProductModel::with(['productSizeColor'])
                 ->where('CodeCompany', $this->active_company);
-                // ->where('CShowInDevice', 1)
-                // ->whereHas('productSizeColor', function ($query) {
-                //     $query->havingRaw('SUM(Mande) > 0');
-                // });
+            // ->where('CShowInDevice', 1)
+            // ->whereHas('productSizeColor', function ($query) {
+            //     $query->havingRaw('SUM(Mande) > 0');
+            // });
 
             $query->orderByRaw('(SELECT SUM(Mande) FROM AV_KalaSizeColorMande_View WHERE AV_KalaSizeColorMande_View.CodeKala = AV_KalaList_View.Code) DESC');
 
@@ -529,7 +563,7 @@ class HomeController extends Controller
                     'categories' => $this->list_categories(),
                     'banners' => $this->fetchBanners(),
                     'newestProducts' => $this->fetchNewestProducts(),
-                    'offeredProducts' => $this->offerd_products(),
+                    'offeredProducts' => $this->offered_products(),
                     'bestSeller' => $this->bestSeller(),
                 ],
                 'message' => 'دریافت اطلاعات با موفقیت انجام شد'

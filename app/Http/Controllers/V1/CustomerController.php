@@ -140,7 +140,7 @@ class CustomerController extends Controller
 
                         return response()->json([
                             "message" => 'کد ورود به سیستم ارسال شد',
-                            "result" => null
+                            "result" => $my_sms
                         ], 202);
                     }
                 } else {
@@ -296,17 +296,31 @@ class CustomerController extends Controller
                     ]);
                     $customer_group_code = $customer_groupCode;
                 }
-                // handle customer registeration
+                // handle customer registration
+
                 $isUserExist = CustomerModel::where('Mobile', $validated['phone_number'])->first();
+
+                $sms_code = rand(1000, 9999);
+                $expireTime = Carbon::now()->addMinutes(5);
+
+                $client_sms_text_message = 'کیدزشاپ  ، کد ورود به سیستم ' . $sms_code;
+                $admin_sms_text_message = 'کاربر جدید با نام ' . $validated['name'] .  ' و شماره تلفن ' . $validated['phone_number'] . ' در سیستم ثبت گردید. ';
+                $smsService = new SmsService($validated['phone_number'], $client_sms_text_message, true,  $admin_sms_text_message);
+                $smsService->send();
+
                 if ($isUserExist) {
+
+                    CustomerModel::where('Mobile', $validated['phone_number'])->update([
+                        'SMSCode' => $sms_code,
+                        'SMSTime' => $expireTime
+                    ]);
+
                     return response()->json([
                         "message" => "کاربری با این شماره همراه قبلا در سیستم ثبت شده است",
-                        "result" => null
-                    ], 302);
+                        "result" => $sms_code
+                    ], 200);
                 } else {
                     $customerCode = CustomerModel::max('CodeCustomer') + 1;
-                    $sms_code = rand(1000, 9999);
-                    $expireTime = Carbon::now()->addMinutes(5);
 
                     CustomerModel::create([
                         'CodeCompany' => $this->active_company,
@@ -341,15 +355,11 @@ class CustomerController extends Controller
                         'SMSTime' => $expireTime
                     ]);
 
-                    $client_sms_text_message = 'کیدزشاپ  ، کد ورود به سیستم ' . $sms_code;
-                    $admin_sms_text_message = 'کاربر جدید با نام ' . $validated['name'] .  ' و شماره تلفن ' . $validated['phone_number'] . ' در سیستم ثبت گردید. ';
-                    $smsService = new SmsService($validated['phone_number'], $client_sms_text_message, true,  $admin_sms_text_message);
-                    $smsService->send();
 
                     return response()->json([
                         "message" => "ثبت نام با موفقیت انجام پذیرفت  و کد پیام کوتاه برای شما ارسال شد",
-                        "result" => null
-                    ], 202);
+                        "result" => $sms_code
+                    ], 201);
                 }
             } else {
                 return response()->json([
@@ -423,6 +433,35 @@ class CustomerController extends Controller
                 'message' => 'موفقیت آمیز بود',
                 'result' => CustomerGroupModel::where('Code', $Code)->firstOrFail(),
             ], 200);
+        } catch (Exception $e) {
+            return response()->json([
+                "message" => $e->getMessage(),
+                "result" => null
+            ], 503);
+        }
+    }
+
+    public function updateUserAddress(Request $request)
+    {
+        try {
+            $validated = $request->validate([
+                'address' => 'required',
+            ]);
+            $token = $request->bearerToken();
+            if (empty($token)) {
+                return response()->json([
+                    'message' => trans('messages.invalid_token'),
+                    'result'  => null,
+                ], 401);
+            }
+            CustomerModel::where('UToken', $token)->update([
+                'Address' => $validated['address']
+            ]);
+            $user = CustomerModel::where('UToken', $token)->first();
+            return response()->json([
+                'message' => 'موفقیت آمیز بود',
+                'result' => $user,
+            ], 202);
         } catch (Exception $e) {
             return response()->json([
                 "message" => $e->getMessage(),

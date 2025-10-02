@@ -5,6 +5,7 @@ namespace App\Http\Controllers\V2\InnerPages;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\CategoryModel;
+use Carbon\Carbon;
 use Exception;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
@@ -78,10 +79,13 @@ class GeneralController extends Controller
         File::put($imagePath, $data->Pic);
 
         Image::configure(['driver' => 'gd']);
-        Image::make($imagePath)->encode('webp', 100)->resize(250, 250, function ($constraint) {
-            $constraint->aspectRatio();
-            $constraint->upsize();
-        })->save($webpPath);
+        Image::make($imagePath)
+            ->resize(1200, 1600, function ($constraint) {
+                $constraint->aspectRatio();
+                $constraint->upsize();
+            })
+            ->encode('webp', 100)
+            ->save($webpPath);
 
         File::delete($imagePath);
     }
@@ -89,13 +93,13 @@ class GeneralController extends Controller
     public function topMenu()
     {
         try {
-            $categotyImageCreation = CategoryModel::select('Pic', 'Code', 'CChangePic', 'PicName')
+            $categoryImageCreation = CategoryModel::select('Pic', 'Code', 'CChangePic', 'PicName')
                 ->where('CodeCompany', $this->active_company)
                 ->orderBy('Code', 'DESC')
                 ->limit(18)
                 ->get();
 
-            foreach ($categotyImageCreation as $categoryImage) {
+            foreach ($categoryImageCreation as $categoryImage) {
                 if ($categoryImage->CChangePic == 1) {
                     if (!empty($categoryImage->PicName)) {
                         $this->removeCategoryImage($categoryImage);
@@ -143,4 +147,23 @@ class GeneralController extends Controller
             return response()->json(['status' => false, 'message' => $e->getMessage()], 500);
         }
     }
+
+    public function currencyUnit()
+    {
+        try {
+            $unit = DB::table('UserSetting')->select('MVahed')->first();
+            return response()->json([
+                'status' => true,
+                'result' =>
+                [
+                    'status' => true,
+                    'value' => $unit->MVahed,
+                    'last_fetched_at' => Carbon::now()->format('Y-m-d H:i:s')
+                ]
+            ], 200);
+        } catch (Exception $e) {
+            return response()->json(['status' => false, 'message' => $e->getMessage()], 500);
+        }
+    }
+
 }

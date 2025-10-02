@@ -39,7 +39,6 @@ class CheckOutController extends Controller
             $paymentResult = WebPaymentModel::where('TrID', $request->Authority)->first();
             $customerResult = CustomerModel::where('Code', $paymentResult->CCode)->first();
             $bankAccount = DB::table('AV_ShomareHesab_VIEW')->where('Def', 1)->where('CodeCompany', $this->active_company)->first();
-            $bCode = PaymentsModel::where('CodeDoreMali', $this->financial_period)->max("BCode");
             $code = PaymentsModel::where('CodeDoreMali', $this->financial_period)->max("Code");
 
             if (!$paymentResult) {
@@ -70,8 +69,12 @@ class CheckOutController extends Controller
                     // update WebPaymentModel
                     $paymentResult->UUID = $result['data']['ref_id'];
                     $paymentResult->save();
-                    // create PaymentModel
+                    // update SOrder
+                    DB::table('SOrder')
+                        ->where('Code', $paymentResult->SCode)
+                        ->update(['CPardakht' => true, 'status' => 'سفارش ثبت شده و پرداخت شده است']);
 
+                    // create PaymentModel
                     PaymentsModel::create([
                         'Code' => (float)$code + 1,
                         'CodeCompany' => $this->active_company,
@@ -84,7 +87,6 @@ class CheckOutController extends Controller
                         'Code2' => $bankAccount->Code,
                         'SDaryaft' => $customerResult->Name,
                         'SPardakht' => $bankAccount->BankName . ' - ' . $bankAccount->ShHesab,
-                        'BCode' => $bCode + 1,
                         'Mablag' => $paymentResult->Mablag,
                         'Babat' => $paymentResult->Comment .  ' با کد رهگیری  ' . $result['data']['ref_id']
                     ]);
@@ -105,7 +107,6 @@ class CheckOutController extends Controller
             $paymentResult = WebPaymentModel::where('TrID', $request->Authority)->first();
             $customerResult = CustomerModel::where('Code', $paymentResult->CCode)->first();
             $bankAccount = DB::table('AV_ShomareHesab_VIEW')->where('Def', 1)->where('CodeCompany', $this->active_company)->first();
-            $bCode = PaymentsModel::where('CodeDoreMali', $this->financial_period)->max("BCode");
             $code = PaymentsModel::where('CodeDoreMali', $this->financial_period)->max("Code");
 
             if (!$paymentResult) {
@@ -136,8 +137,13 @@ class CheckOutController extends Controller
                     // update WebPaymentModel
                     $paymentResult->UUID = $result['data']['ref_id'];
                     $paymentResult->save();
-                    // create PaymentModel
 
+                    // update SOrder
+                    DB::table('SOrder')
+                        ->where('Code', $paymentResult->SCode)
+                        ->update(['CPardakht' => true, 'status' => 'پرداخت شده']);
+
+                    // create PaymentModel
                     PaymentsModel::create([
                         'Code' => (float)$code + 1,
                         'CodeCompany' => $this->active_company,
@@ -150,7 +156,6 @@ class CheckOutController extends Controller
                         'Code2' => $bankAccount->Code,
                         'SDaryaft' => $customerResult->Name,
                         'SPardakht' => $bankAccount->BankName . ' - ' . $bankAccount->ShHesab,
-                        'BCode' => $bCode + 1,
                         'Mablag' => $paymentResult->Mablag,
                         'Babat' => $paymentResult->Comment .  ' با کد رهگیری  ' . $result['data']['ref_id']
                     ]);
@@ -167,11 +172,6 @@ class CheckOutController extends Controller
     public function zarinpal_success_payment(Request $request)
     {
         try {
-            $validated = $request->validate([
-                'referenceId' => 'required',
-            ], [
-                'referenceId.required' => 'کد رهگیری یافت نشد',
-            ]);
             $referenceId = $request->referenceId;
             return redirect('https://kidsshop110.ir/payment-success/' . urlencode($referenceId));
         } catch (Exception $e) {
@@ -182,12 +182,6 @@ class CheckOutController extends Controller
     public function zarinpal_unsuccess_payment(Request $request)
     {
         try {
-
-            $validated = $request->validate([
-                'exception' => 'required',
-            ], [
-                'exception.required' => 'خطایی در پرداخت اتفاق افتاده است',
-            ]);
             $exception = $request->exception;
             return redirect('https://kidsshop110.ir/payment-failed?exception=' . urlencode($exception));
         } catch (Exception $e) {

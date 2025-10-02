@@ -72,15 +72,14 @@ class ProductController extends Controller
 
             Image::configure(['driver' => 'gd']);
             Image::make($imagePath)
-                ->resize(250, 250, function ($constraint) {
+                ->resize(1200, 1600, function ($constraint) {
                     $constraint->aspectRatio();
                     $constraint->upsize();
                 })
-                ->encode('webp', 90)
+                ->encode('webp', 100)
                 ->save($webpPath);
 
             File::delete($imagePath);
-
             return true;
         } catch (Exception $e) {
             Log::error("Failed to process product image: {$e->getMessage()}");
@@ -232,7 +231,7 @@ class ProductController extends Controller
             $productImages = ProductImagesModel::where('CodeKala', $product->Code)->get();
 
             foreach ($productImages as $image) {
-                if (!empty($image->Pic) && empty($image->PicName)) {
+                if (!empty($image->Pic)) {
                     $picName = ceil($image->Code) . '_' . Carbon::parse($image->created_at)->timestamp;
                     if ($this->processProductImage($image, $picName)) {
                         DB::table('KalaImage')->where('Code', $image->Code)->update(['PicName' => $picName]);

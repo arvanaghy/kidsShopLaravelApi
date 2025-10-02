@@ -75,7 +75,13 @@ class CategoriesController extends Controller
         File::put($imagePath, $data->Pic);
 
         Image::configure(['driver' => 'gd']);
-        Image::make($imagePath)->encode('webp', 100)->resize(250, 250)->save($webpPath);
+        Image::make($imagePath)
+            ->resize(1200, 1600, function ($constraint) {
+                $constraint->aspectRatio();
+                $constraint->upsize();
+            })
+            ->encode('webp', 100)
+            ->save($webpPath);
 
         File::delete($imagePath);
     }
@@ -84,16 +90,20 @@ class CategoriesController extends Controller
     {
         try {
             $search = $request->input('search');
+            if ($search = $request->query('search')) {
+                $search = str_replace('ی', 'ي', $search);
+            }
 
-            $categotyImageCreation = CategoryModel::select('Pic', 'Code', 'CChangePic', 'PicName')
+
+            $categoryImageCreation = CategoryModel::select('Pic', 'Code', 'CChangePic', 'PicName')
                 ->where('CodeCompany', $this->active_company)
                 ->when($search, function ($query, $search) {
                     return $query->where('Name', 'like', '%' . $search . '%');
                 })
                 ->orderBy('Code', 'DESC')
-                ->paginate(24);
+                ->paginate(8);
 
-            foreach ($categotyImageCreation as $categoryImage) {
+            foreach ($categoryImageCreation as $categoryImage) {
                 if ($categoryImage->CChangePic == 1) {
                     if (!empty($categoryImage->PicName)) {
                         $this->removeCategoryImage($categoryImage);
@@ -117,15 +127,12 @@ class CategoriesController extends Controller
                     return $query->where('Name', 'like', '%' . $search . '%');
                 })
                 ->orderBy('Code', 'DESC')
-                ->paginate(24);
+                ->paginate(8);
 
-            // append search query to pagination links
             $categoriesList->appends(['search' => $search]);
 
             return response()->json([
-                'result' => [
-                    'categories' => $categoriesList
-                ],
+                'result' => $categoriesList,
                 'message' => 'دریافت اطلاعات با موفقیت انجام شد'
             ], 200);
         } catch (Exception $e) {
