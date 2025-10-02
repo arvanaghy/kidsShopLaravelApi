@@ -3,129 +3,37 @@
 namespace App\Http\Controllers\V2\InnerPages;
 
 use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
-use App\Models\CategoryModel;
+use App\Services\CategoryService;
+use App\Services\GeneralService;
 use Carbon\Carbon;
 use Exception;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\File;
-use Intervention\Image\ImageManagerStatic as Image;
+
 
 class GeneralController extends Controller
 {
-    protected $active_company = null;
-    protected $financial_period = null;
+    protected $generalService = null;
+    protected $categoryService = null;
 
 
-    protected function CreateCategoryPath()
-    {
-        $paths = [
-            "category-images",
-            "category-images/original",
-            "category-images/webp"
-        ];
-
-        foreach ($paths as $path) {
-            $fullPath = public_path($path);
-            if (!File::isDirectory($fullPath)) {
-                File::makeDirectory($fullPath, 0755, true, true);
-            }
-        }
-    }
-
-
-
-    public function __construct(Request $request)
+    public function __construct(GeneralService $generalService, CategoryService $categoryService)
     {
         try {
-            $this->CreateCategoryPath();
-
-            $this->active_company = DB::table('Company')
-                ->where('DeviceSelected', 1)
-                ->pluck('Code')
-                ->first();
-
-            if ($this->active_company) {
-                $this->financial_period = DB::table('DoreMali')
-                    ->where('CodeCompany', $this->active_company)
-                    ->where('DeviceSelected', 1)
-                    ->pluck('Code')
-                    ->first();
-            }
+            $this->generalService = $generalService;
+            $this->categoryService = $categoryService;
         } catch (Exception $e) {
             return response()->json(['status' => false, 'message' => $e->getMessage()], 500);
         }
     }
 
-    protected function removeCategoryImage($data)
-    {
-        if (!empty($data->PicName)) {
-            $webpPath = public_path("category-images/webp/" . $data->PicName . ".webp");
-            if (File::exists($webpPath)) {
-                File::delete($webpPath);
-            }
-        }
-    }
-
-    protected function CreateCategoryImages($data, $picName)
-    {
-        if (empty($data->Pic)) {
-            return;
-        }
-
-        $imagePath = public_path("category-images/original/" . $picName . ".jpg");
-        $webpPath = public_path("category-images/webp/" . $picName . ".webp");
-
-        File::put($imagePath, $data->Pic);
-
-        Image::configure(['driver' => 'gd']);
-        Image::make($imagePath)
-            ->resize(1200, 1600, function ($constraint) {
-                $constraint->aspectRatio();
-                $constraint->upsize();
-            })
-            ->encode('webp', 100)
-            ->save($webpPath);
-
-        File::delete($imagePath);
-    }
 
     public function topMenu()
     {
         try {
-            $categoryImageCreation = CategoryModel::select('Pic', 'Code', 'CChangePic', 'PicName')
-                ->where('CodeCompany', $this->active_company)
-                ->orderBy('Code', 'DESC')
-                ->limit(18)
-                ->get();
-
-            foreach ($categoryImageCreation as $categoryImage) {
-                if ($categoryImage->CChangePic == 1) {
-                    if (!empty($categoryImage->PicName)) {
-                        $this->removeCategoryImage($categoryImage);
-                    }
-
-                    if (!empty($categoryImage->Pic)) {
-                        $picName = ceil($categoryImage->Code) . "_" . rand(10000, 99999);
-                        $this->CreateCategoryImages($categoryImage, $picName);
-                        $updateData = ['CChangePic' => 0, 'PicName' => $picName];
-                    } else {
-                        $updateData = ['CChangePic' => 0, 'PicName' => null];
-                    }
-
-                    DB::table('KalaGroup')->where('Code', $categoryImage->Code)->update($updateData);
-                }
-            }
-
-            $categoriesList = CategoryModel::select('Code', 'Name', 'Comment', 'PicName')
-                ->where('CodeCompany', $this->active_company)
-                ->orderBy('Code', 'DESC')
-                ->limit(18)
-                ->get();
+            $categories = $this->categoryService->listMenuCategories();
 
             return response()->json([
                 'result' => [
-                    'categories' => $categoriesList
+                    'categories' => $categories
                 ],
                 'message' => 'دریافت اطلاعات با موفقیت انجام شد'
             ], 200);
@@ -141,7 +49,7 @@ class GeneralController extends Controller
     public function companyInfo()
     {
         try {
-            $companyInfo = DB::table('Company')->where('DeviceSelected', 1)->first();
+            $companyInfo = $this->generalService->getCompanyInfo();
             return response()->json(['status' => true, 'company_info' => $companyInfo], 200);
         } catch (Exception $e) {
             return response()->json(['status' => false, 'message' => $e->getMessage()], 500);
@@ -151,7 +59,7 @@ class GeneralController extends Controller
     public function currencyUnit()
     {
         try {
-            $unit = DB::table('UserSetting')->select('MVahed')->first();
+            $unit = $this->generalService->getCurrencyUnit();
             return response()->json([
                 'status' => true,
                 'result' =>
@@ -165,5 +73,4 @@ class GeneralController extends Controller
             return response()->json(['status' => false, 'message' => $e->getMessage()], 500);
         }
     }
-
 }
