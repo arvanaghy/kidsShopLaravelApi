@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\CheckOutController;
+use App\Http\Controllers\DevelopController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\V1\OrderController;
 use App\Http\Controllers\V1\InvoiceController;
@@ -94,13 +95,14 @@ Route::prefix('v2')->group(function () {
     Route::get('/currency-unit', [WebGeneralController::class, 'currencyUnit']);
     Route::get('/top-menu', [WebGeneralController::class, 'topMenu']);
     Route::get('/home-page', [WebHomeController::class, 'homePage']);
-    Route::get('/reset-images', [WebHomeController::class, 'resetCChangePic']);
+    Route::get('/reset-images', [DevelopController::class, 'resetCChangePic']);
+    Route::get('/test-redis', [DevelopController::class, 'testRedis']);
     Route::get('/list-categories', [WebCategoriesController::class, 'listCategories']);
     Route::get('/list-subcategories/{Code}', [WebSubCategories::class, 'index']);
     Route::get('/list-subcategory-products/{Code}', [WebSubCategories::class, 'listSubcategoryProducts']);
     Route::get('/list-all-products/', [WebSubCategories::class, 'listAllProducts']);
     Route::get('/list-all-offers/', [WebSubCategories::class, 'listAllOffers']);
-    Route::get('/list-best-seller/', [WebSubCategories::class, 'listBestSeller']);
+    Route::get('/list-best-seller/', [WebProductController::class, 'listBestSeller']);
     Route::get('/show-product/{Code}', [WebProductController::class, 'showProduct']);
 
     Route::middleware('customerConfirm')->group(function () {

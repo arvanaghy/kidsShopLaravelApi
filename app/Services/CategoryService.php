@@ -47,15 +47,18 @@ class CategoryService
 
     public function listMenuCategories()
     {
-        $query = CategoryModel::where('CodeCompany', $this->active_company)->orderBy('Code', 'DESC');
+        $baseQuery = CategoryModel::where('CodeCompany', $this->active_company)->orderBy('Code', 'DESC');
 
-        $categories = $query->limit(18)->get();;
+        $categories = $baseQuery->limit(18)->get();
 
         $this->processCategoryImages($categories);
 
-        $result = $query->select('Code', 'Name', 'Comment', 'PicName')->limit(18)->get();
+        $categories = $categories->map(function ($item) {
+            unset($item->Pic);
+            return $item;
+        });
 
-        return $result;
+        return $categories;
     }
 
 

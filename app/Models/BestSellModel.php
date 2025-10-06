@@ -9,17 +9,17 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class BestSellModel extends Model
 {
     use HasFactory;
-    protected $table = "AV_KalaTedadForooshKol_View";
+    protected $table = "AV_RKalaSoodForoosh_View";
 
     public $timestamps = false;
 
 
     public function productSizeColor(): HasMany
     {
-        return $this->hasMany(ProductSizeColorModel::class, 'CodeKala', 'KCode');
+        return $this->hasMany(ProductSizeColorModel::class, 'CodeKala', 'Code');
     }
     public function productImages(): HasMany
     {
-        return $this->hasMany(ProductImagesModel::class, 'CodeKala', 'KCode');
+        return $this->hasMany(ProductImagesModel::class, 'CodeKala', 'Code');
     }
 }

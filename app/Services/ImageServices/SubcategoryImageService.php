@@ -2,19 +2,17 @@
 
 namespace App\Services\ImageServices;
 
-use App\Services\ImageServices\ImageService;
 use Illuminate\Support\Facades\File;
 
-class CategoryImageService
-{
+class SubcategoryImageService {
 
     protected $imageService;
-    protected function CreateCategoryImageDirectories()
+    protected function CreateSubcategoryImageDirectories()
     {
         $paths = [
-            "category-images",
-            "category-images/original",
-            "category-images/webp"
+            "subcategory-images",
+            "subcategory-images/original",
+            "subcategory-images/webp"
         ];
 
         foreach ($paths as $path) {
@@ -28,10 +26,10 @@ class CategoryImageService
     public function __construct(ImageService $imageService)
     {
         $this->imageService = $imageService;
-        $this->CreateCategoryImageDirectories();
+        $this->CreateSubcategoryImageDirectories();
     }
     /**
-     * Process a category image.
+     * Process a subcategory image.
      *
      * @param mixed $data Image data object
      * @param string $picName Image name
@@ -39,8 +37,8 @@ class CategoryImageService
      */
     public function processCategoryImage($data, string $picName): bool
     {
-        $imagePath = public_path("category-images/original/" . $picName . ".jpg");
-        $webpPath = public_path("category-images/webp/" . $picName . ".webp");
+        $imagePath = public_path("subcategory-images/original/" . $picName . ".jpg");
+        $webpPath = public_path("subcategory-images/webp/" . $picName . ".webp");
         return $this->imageService->processImage(
             data: $data,
             imagePath: $imagePath,
@@ -51,16 +49,16 @@ class CategoryImageService
     }
 
     /**
-     * Remove a category image.
+     * Remove a subcategory image.
      *
      * @param mixed $data Image data object
      */
-    public function removeCategoryImage($data): void
+    public function removeSubcategoryImage($data): void
     {
         if (empty($data->PicName)) {
             return;
         }
-        $path = public_path("category-images/webp/" . $data->PicName . ".webp");
+        $path = public_path("subcategory-images/webp/" . $data->PicName . ".webp");
         $this->imageService->removeImage($path);
     }
 }

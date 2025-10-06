@@ -2,9 +2,7 @@
 
 namespace App\Services\ImageServices;
 
-use Carbon\Carbon;
 use Exception;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Log;
 
@@ -35,13 +33,34 @@ class ProductImageService
         $this->imageService = $imageService;
     }
 
+
+    protected function createProductImagePath($GCode, $SCode): void
+    {
+        $paths = [
+            public_path('products-image/original/' . $GCode),
+            public_path('products-image/original/' . $GCode . '/' . $SCode),
+            public_path('products-image/webp/' . $GCode),
+            public_path('products-image/webp/' . $GCode . '/' . $SCode),
+        ];
+
+        foreach ($paths as $path) {
+            if (!File::isDirectory($path)) {
+                File::makeDirectory($path, 0755, true);
+            }
+        }
+    }
+
     /**
      * Process and save product image as WebP.
      */
-    public function processSingleProductImage($product, $image, string $pic_name): bool
+    public function processProductImage($product, $image, string $pic_name): bool
     {
-        $imagePath = public_path("products-image/original/{$product->GCode}/{$product->SCode}/{$pic_name}.jpg");
-        $webpPath = public_path("products-image/webp/{$product->GCode}/{$product->SCode}/{$pic_name}.webp");
+        $gCode = is_array($product) ? $product['GCode'] : $product->GCode;
+        $sCode = is_array($product) ? $product['SCode'] : $product->SCode;
+        $imagePath = public_path("products-image/original/{$gCode}/{$sCode}/{$pic_name}.jpg");
+        $webpPath = public_path("products-image/webp/{$gCode}/{$sCode}/{$pic_name}.webp");
+
+        $this->createProductImagePath($gCode, $sCode);
 
         return $this->imageService->processImage(
             data: $image,
@@ -71,24 +90,6 @@ class ProductImageService
             }
         } catch (Exception $e) {
             Log::warning("Failed to cleanup images: {$e->getMessage()}");
-        }
-    }
-
-    /**
-     * Update product images if needed.
-     */
-    public function updateProductImages($images): void
-    {
-        foreach ($images as $image) {
-            if (data_get($image, 'CChangePic') && !empty($image->Pic)) {
-                $picName = ceil($image->ImageCode) . '_' . Carbon::parse($image->created_at)->timestamp;
-                // if ($this->processProductImage($image, $picName)) {
-                //     DB::transaction(function () use ($image, $picName) {
-                //         DB::table('KalaImage')->where('Code', $image->ImageCode)->update(['PicName' => $picName]);
-                //         DB::table('Kala')->where('Code', $image->Code)->update(['CChangePic' => 0]);
-                //     });
-                // }
-            }
         }
     }
 }
