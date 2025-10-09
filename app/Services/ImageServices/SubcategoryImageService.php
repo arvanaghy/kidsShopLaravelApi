@@ -4,7 +4,8 @@ namespace App\Services\ImageServices;
 
 use Illuminate\Support\Facades\File;
 
-class SubcategoryImageService {
+class SubcategoryImageService
+{
 
     protected $imageService;
     protected function CreateSubcategoryImageDirectories()
@@ -35,7 +36,7 @@ class SubcategoryImageService {
      * @param string $picName Image name
      * @return bool
      */
-    public function processCategoryImage($data, string $picName): bool
+    public function processSubcategoryImage($data, string $picName): bool
     {
         $imagePath = public_path("subcategory-images/original/" . $picName . ".jpg");
         $webpPath = public_path("subcategory-images/webp/" . $picName . ".webp");

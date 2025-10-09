@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\V1;
 
 use App\Http\Controllers\Controller;
+use App\Models\CategoryModel;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use App\Models\CustomerModel;
@@ -144,29 +145,6 @@ class GeneralController extends Controller
         }
     }
 
-    public function checkOnlinePaymentAvailable()
-    {
-        try {
-            $bankAccount = DB::table('AV_ShomareHesab_VIEW')->where('Def', 1)->where('CodeCompany', $this->active_company)->first();
-            if ($bankAccount) {
-                return response()->json([
-                    'result' => $bankAccount,
-                    "message" => "درگاه پرداخت اینترنتی فعال است"
-                ], 201);
-            } else {
-                return response()->json([
-                    'result' => null,
-                    "message" => "درگاه پرداخت اینترنتی یافت نشد"
-                ], 404);
-            }
-        } catch (Exception $e) {
-            return response()->json([
-                'result' => null,
-                'message' => $e->getMessage(),
-            ], 503);
-        }
-    }
-
     public function contact_us(Request $request)
     {
         try {
@@ -208,6 +186,29 @@ class GeneralController extends Controller
         }
     }
 
+
+    public function checkOnlinePaymentAvailable()
+    {
+        try {
+            $bankAccount = DB::table('AV_ShomareHesab_VIEW')->where('Def', 1)->where('CodeCompany', $this->active_company)->first();
+            if ($bankAccount) {
+                return response()->json([
+                    'result' => $bankAccount,
+                    "message" => "درگاه پرداخت اینترنتی فعال است"
+                ], 201);
+            } else {
+                return response()->json([
+                    'result' => null,
+                    "message" => "درگاه پرداخت اینترنتی یافت نشد"
+                ], 404);
+            }
+        } catch (Exception $e) {
+            return response()->json([
+                'result' => null,
+                'message' => $e->getMessage(),
+            ], 503);
+        }
+    }
     public function fetchBanners()
     {
         try {
@@ -267,7 +268,6 @@ class GeneralController extends Controller
         }
     }
 
-
     public function about_us()
     {
         try {
@@ -282,8 +282,6 @@ class GeneralController extends Controller
             ], 503);
         }
     }
-
-
 
     protected function list_categories()
     {
@@ -324,12 +322,13 @@ class GeneralController extends Controller
         }
     }
 
-
-
-
     public function home_page()
     {
         try {
+            return response()->json([
+                'result' => null,
+                "message" => "دریافت اطلاعات با موفقیت انجام شد",
+            ]);
         } catch (Exception $e) {
             return response()->json([
                 'result' => null,

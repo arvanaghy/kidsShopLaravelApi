@@ -290,8 +290,8 @@ return [
             'merchant_id' => env('ZARINPAL_MERCHANT_ID', '87955b91-59e8-4753-af27-b2815b9c6b40'),
             'api_url' => env('ZARINPAL_API_URL', 'https://api.zarinpal.com/pg/v4/payment/request.json'),
             'verify_url' => env('ZARINPAL_VERIFY_URL', 'https://api.zarinpal.com/pg/v4/payment/verify.json'),
-            'callback_url' => env('ZARINPAL_CALLBACK_URL', 'https://api.kidsshop110.ir/api/v1/zarinpal-payment-callback'),
-            'callback_url_mobile' => env('ZARINPAL_CALLBACK_URL_MOBILE', 'https://api.kidsshop110.ir/api/v1/zarinpal-payment-callback-mobile'),
+            'callback_url' => env('ZARINPAL_CALLBACK_URL', 'https://api.kidsshop110.ir/api/v2/payment-callback'),
+            'callback_url_mobile' => env('ZARINPAL_CALLBACK_URL_MOBILE', 'https://api.kidsshop110.ir/api/v2/callback-mobile'),
 
             'apiPurchaseUrl' => 'https://api.zarinpal.com/pg/v4/payment/request.json',
             'apiPaymentUrl' => 'https://www.zarinpal.com/pg/StartPay/',

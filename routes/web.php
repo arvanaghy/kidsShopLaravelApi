@@ -15,9 +15,5 @@ use App\Http\Controllers\CheckOutController;
 */
 
 Route::get('/', function () {
-   phpinfo();
+    return view('welcome To Hesma Api , be fun with Ilyas Bey Efendi ');
 });
-Route::get('/zarinpal-payment-callback', [CheckOutController::class, 'zarinpal_payment_callback'])->name('zarinpal-payment-callback');
-Route::get('/zarinpal-success-payment/{referenceId}', [CheckOutController::class, 'zarinpal_success_payment'])->name('zarinpal-success-payment');
-Route::get('/zarinpal-unsuccess-payment/{exception}', [CheckOutController::class, 'zarinpal_unsuccess_payment'])->name('zarinpal-unsuccess-payment');
-Route::get('/bad-request', [CheckOutController::class, 'bad_request'])->name('bad-request');

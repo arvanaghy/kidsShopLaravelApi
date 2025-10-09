@@ -2,22 +2,32 @@
 
 namespace App\Services;
 
-use Illuminate\Support\Facades\DB;
+use App\Repositories\CompanyRepository;
+use App\Traits\Cacheable;
 
 class CompanyService
 {
-    public function getActiveCompany(): ?string
+    use Cacheable;
+
+    private $companyRepository;
+    private $ttl = 60 * 30;
+
+    public function __construct(CompanyRepository $companyRepository)
     {
-        return DB::table('Company')
-            ->where('DeviceSelected', 1)
-            ->value('Code');
+        $this->companyRepository = $companyRepository;
     }
 
-    public function getFinancialPeriod(string $companyCode): ?string
+    public function getActiveCompany()
     {
-        return DB::table('DoreMali')
-            ->where('CodeCompany', $companyCode)
-            ->where('DeviceSelected', 1)
-            ->value('Code');
+        return $this->cacheQuery('active_company', $this->ttl, function () {
+            return $this->companyRepository->getActiveCompanyCode();
+        });
+    }
+
+    public function getFinancialPeriod($companyCode)
+    {
+        return $this->cacheQuery('financial_period_' . $companyCode, $this->ttl, function () use ($companyCode) {
+            return $this->companyRepository->getFinancialPeriodCode($companyCode);
+        });
     }
 }

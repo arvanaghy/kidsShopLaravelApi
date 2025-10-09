@@ -19,9 +19,7 @@ class CategoriesController extends Controller
     public function listCategories(Request $request)
     {
         try {
-            $search = $request->query('search');
-            $categoriesList = $this->categoryService->listCategories($search);
-
+            $categoriesList = $this->categoryService->listCategories($request);
             return response()->json([
                 'result' => $categoriesList,
                 'message' => 'دریافت اطلاعات با موفقیت انجام شد'

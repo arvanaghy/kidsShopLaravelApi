@@ -2,11 +2,11 @@
 
 namespace App\Http\Controllers\V2\InnerPages;
 
+use App\Helpers\FilterChecker;
 use App\Http\Controllers\Controller;
 use App\Services\ProductService;
 use Exception;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Log;
 
 class ProductController extends Controller
 {
@@ -30,11 +30,15 @@ class ProductController extends Controller
     public function showProduct($code)
     {
         try {
-            $result = $this->productService->showSingleProduct($code);
+
+            $product = $this->productService->showSingleProduct($code);
+            $relatedProducts = $this->productService->relatedProducts($product->GCode, $product->SCode, $product->Code);
+            $suggestedProducts = $this->productService->suggestedProducts($product->Code);
+
             return response()->json([
-                'product' => $result,
-                'relatedProducts' => $this->productService->relatedProducts($result->GCode, $result->SCode, $result->Code),
-                'suggestedProducts' => $this->productService->suggestedProducts($code),
+                'product' => $product,
+                'relatedProducts' => $relatedProducts,
+                'suggestedProducts' => $suggestedProducts,
                 'message' => trans('messages.product_displayed_successfully')
             ]);
         } catch (Exception $e) {
@@ -46,20 +50,17 @@ class ProductController extends Controller
     public function listAllProducts(Request $request)
     {
         try {
-            $productPage = $request->query('product_page', 1);
 
-            $allProducts = $this->list_products();
-            if ($allProducts instanceof \Illuminate\Http\JsonResponse) {
-                return $allProducts;
-            }
-            $allProducts->appends(['product_page' => $productPage]);
+            $allProducts = $this->productService->listAllProducts($request);
+            $hasRequestFilter = FilterChecker::hasFilters($request);
+            $colors = $this->productService->listProductColors($allProducts, $hasRequestFilter, 'all');
+            $sizes = $this->productService->listProductSizes($allProducts, $hasRequestFilter, 'all');
 
             return response()->json([
                 'result' => [
                     'products' => $allProducts,
-                    'colors' => $this->list_colors('0', 'all'),
-                    'sizes' => $this->list_sizes('0', 'all'),
-                    'prices' => $this->list_prices($allProducts),
+                    'colors' => $colors,
+                    'sizes' => $sizes,
                 ],
                 'message' => 'دریافت اطلاعات با موفقیت انجام شد'
             ], 200);
@@ -72,22 +73,46 @@ class ProductController extends Controller
     }
 
 
-    public function listBestSeller(Request $request)
+    public function listBestSellingProducts(Request $request)
     {
         try {
-            $productPage = $request->query('product_page', 1);
-            $allBestSellingProducts = $this->productService->listBestSelling($request);
-            if ($allBestSellingProducts instanceof \Illuminate\Http\JsonResponse) {
-                return $allBestSellingProducts;
-            }
-            $allBestSellingProducts->appends(['product_page' => $productPage]);
+            $allBestSellingProducts = $this->productService->listBestSellingProducts($request);
+            $hasRequestFilter = FilterChecker::hasFilters($request);
+
+            $colors = $this->productService->listProductColors($allBestSellingProducts, $hasRequestFilter, 'bestseller');
+            $sizes = $this->productService->listProductSizes($allBestSellingProducts, $hasRequestFilter, 'bestseller');
 
             return response()->json([
                 'result' => [
                     'products' => $allBestSellingProducts,
-                    // 'colors' => $this->productService->listProductColors('0', 'all'),
-                    // 'sizes' => $this->productService->listProductSizes('0', 'all'),
-                    // 'prices' => $this->productService->listProductPrices($allBestSellingProducts),
+                    'colors' => $colors,
+                    'sizes' => $sizes,
+                ],
+                'message' => 'دریافت اطلاعات با موفقیت انجام شد'
+            ], 200);
+        } catch (Exception $e) {
+            return response()->json([
+                'status' => false,
+                'message' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+
+    public function listOfferedProducts(Request $request)
+    {
+        try {
+            $allOfferedProducts = $this->productService->listOfferedProducts($request);
+            $hasRequestFilter = FilterChecker::hasFilters($request);
+
+            $colors = $this->productService->listProductColors($allOfferedProducts, $hasRequestFilter, 'offers');
+            $sizes = $this->productService->listProductSizes($allOfferedProducts, $hasRequestFilter, 'offers');
+
+            return response()->json([
+                'result' => [
+                    'products' => $allOfferedProducts,
+                    'colors' => $colors,
+                    'sizes' => $sizes,
                 ],
                 'message' => 'دریافت اطلاعات با موفقیت انجام شد'
             ], 200);

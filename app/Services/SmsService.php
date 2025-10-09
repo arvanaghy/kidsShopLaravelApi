@@ -2,76 +2,37 @@
 
 namespace App\Services;
 
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
+
 class SmsService
 {
-    public ?string $phone_number = null;
-    public ?string $text = null;
-    public bool $is_notice_to_admin = false;
-    public ?string $admin_text = null;
+    protected $baseUrl = 'https://webone-sms.ir/SMSInOutBox/SendSms';
+    protected $username = '09354278334';
+    protected $password = '414411';
+    protected $from = '10002147';
 
-    public function __construct(
-        $phone_number,
-        $text,
-        $is_notice_to_admin = false,
-        $admin_text = null
-    ) {
-        $this->phone_number = $phone_number;
-        $this->text = $text;
-        $this->is_notice_to_admin = $is_notice_to_admin;
-        $this->admin_text = $admin_text;
-
-        if ($this->is_notice_to_admin && $this->admin_text) {
-            $this->send_to_admin();
-        }
-    }
-
-    public function send(): array
+    public function send($phoneNumber, $message)
     {
         try {
-            $base_url = config('smspanel.web_one.base_url');
-            $params = array(
-                'username' => config('smspanel.web_one.username'),
-                'password' => config('smspanel.web_one.password'),
-                'from' => config('smspanel.web_one.from'),
-                'text' => $this->text,
-                'to' => $this->phone_number
-            );
-            $url = $base_url . '?' . http_build_query($params);
-            $ch = curl_init();
-            curl_setopt($ch, CURLOPT_URL, $url);
-            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            $response = Http::get($this->baseUrl, [
+                'username' => $this->username,
+                'password' => $this->password,
+                'from' => $this->from,
+                'to' => $phoneNumber,
+                'text' => $message,
+            ]);
 
-            curl_exec($ch);
-            curl_close($ch);
+            if ($response->successful()) {
+                Log::info('SMS sent successfully to ' . $phoneNumber);
+                return true;
+            }
 
-            return ['status' => 'success', 'message' => 'پیام  با موفقیت ارسال شد'];
+            Log::error('Failed to send SMS to ' . $phoneNumber . ': ' . $response->body());
+            return false;
         } catch (\Exception $e) {
-            return ['status' => 'error', 'message' => $e->getMessage()];
-        }
-    }
-
-    public function send_to_admin(): array
-    {
-        try {
-            $base_url = config('smspanel.web_one.base_url');
-            $params = array(
-                'username' => config('smspanel.web_one.username'),
-                'password' => config('smspanel.web_one.password'),
-                'from' => config('smspanel.web_one.from'),
-                'text' => $this->admin_text,
-                'to' => config('smspanel.web_one.admin_phone_number')
-            );
-            $url = $base_url . '?' . http_build_query($params);
-            $ch = curl_init();
-            curl_setopt($ch, CURLOPT_URL, $url);
-            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-
-            curl_exec($ch);
-            curl_close($ch);
-
-            return ['status' => 'success', 'message' => 'پیام  با موفقیت ارسال شد'];
-        } catch (\Exception $e) {
-            return ['status' => 'error', 'message' => $e->getMessage()];
+            Log::error('Error sending SMS to ' . $phoneNumber . ': ' . $e->getMessage());
+            return false;
         }
     }
 }

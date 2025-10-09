@@ -4,7 +4,7 @@ namespace App\Services;
 
 use App\Models\DeviceHeaderImage;
 use App\Services\ImageServices\BannerImageService;
-use Illuminate\Support\Facades\Cache;
+use App\Traits\Cacheable;
 use Illuminate\Support\Facades\DB;
 
 class GeneralService
@@ -12,6 +12,9 @@ class GeneralService
 
     protected $active_company;
     protected $bannerImageService;
+    private $cacheTime = 60 * 30;
+
+    use Cacheable;
 
     public function __construct(CompanyService $companyService, BannerImageService $bannerImageService)
     {
@@ -21,7 +24,7 @@ class GeneralService
 
     public function getCompanyInfo()
     {
-        return Cache::remember('company_info', 60 * 30, function () {
+        return $this->cacheQuery('company_info', $this->cacheTime, function () {
             return DB::table('Company')->where('DeviceSelected', 1)->first();
         });
     }
@@ -33,7 +36,7 @@ class GeneralService
 
     public function fetchBanners()
     {
-        return Cache::remember('home_page_banners', 60 * 30, function () {
+        return $this->cacheQuery('home_page_banners', $this->cacheTime, function () {
             $baseQuery = DeviceHeaderImage::where('CodeCompany', $this->active_company)
                 ->orderBy('Code', 'DESC')
                 ->limit(6);
@@ -71,6 +74,35 @@ class GeneralService
             });
 
             return $results;
+        });
+    }
+
+    public function listTransferServices()
+    {
+        return $this->cacheQuery('transfer_services', $this->cacheTime, function () {
+            return DB::table('AV_KhadamatDevice_View')->where('CodeCompany', $this->active_company)->get();
+        });
+    }
+
+
+    public function checkOnlinePaymentAvailable()
+    {
+        return $this->cacheQuery('online_payment_available', $this->cacheTime, function () {
+            return DB::table('AV_ShomareHesab_VIEW')->where('Def', 1)->where('CodeCompany', $this->active_company)->first();
+        });
+    }
+
+    public function aboutUs()
+    {
+        return $this->cacheQuery('about_us', $this->cacheTime, function () {
+            return DB::table('DeviceAbout')->where('Type', 0)->orderBy('Radif', 'asc')->get();
+        });
+    }
+
+    public function faq()
+    {
+        return $this->cacheQuery('faq', $this->cacheTime, function () {
+            return DB::table('DeviceAbout')->where('Type', 1)->orderBy('Radif', 'asc')->get();
         });
     }
 }

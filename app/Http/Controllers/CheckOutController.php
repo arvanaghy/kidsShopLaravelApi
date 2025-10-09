@@ -168,29 +168,4 @@ class CheckOutController extends Controller
             return redirect('https://kidsshop110.ir/payment-failed-mobile?exception=' . urlencode($e->getMessage()));
         }
     }
-
-    public function zarinpal_success_payment(Request $request)
-    {
-        try {
-            $referenceId = $request->referenceId;
-            return redirect('https://kidsshop110.ir/payment-success/' . urlencode($referenceId));
-        } catch (Exception $e) {
-            return redirect('https://kidsshop110.ir/payment-failed?exception=' . urlencode($e->getMessage()));
-        }
-    }
-
-    public function zarinpal_unsuccess_payment(Request $request)
-    {
-        try {
-            $exception = $request->exception;
-            return redirect('https://kidsshop110.ir/payment-failed?exception=' . urlencode($exception));
-        } catch (Exception $e) {
-            return redirect('https://kidsshop110.ir/payment-failed?exception=' . urlencode($e->getMessage()));
-        }
-    }
-
-    public function bad_request()
-    {
-        return redirect('https://kidsshop110.ir/payment-failed?exception=badRequestPage');
-    }
 }

@@ -5,13 +5,18 @@ namespace App\Services;
 use App\Helpers\StringHelper;
 use App\Models\CategoryModel;
 use App\Services\ImageServices\CategoryImageService;
+use App\Traits\Cacheable;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 class CategoryService
 {
     protected $companyService;
     protected $categoryImageService;
     protected $active_company;
+    private $ttl = 60 * 30;
+
+    use Cacheable;
 
     public function __construct(
         CompanyService $companyService,
@@ -22,45 +27,56 @@ class CategoryService
         $this->active_company = $this->companyService->getActiveCompany();
     }
 
-    public function listCategories(?string $search = null)
+    public function listCategories($request = null)
     {
-        if ($search) {
-            $search = StringHelper::normalizePersianCharacters($search);
-        }
 
-        $query = CategoryModel::where('CodeCompany', $this->active_company)
-            ->when($search, function ($query, $search) {
-                return $query->where('Name', 'like', "%{$search}%");
-            })
-            ->orderBy('Code', 'DESC');
+        $queryParams = $request ? $request->query() : [];
+        $page = $request ? $request->query('page', 1) : 1;
 
-        $categories = $query->paginate(8);
+        $cacheKey = 'list_categories_' . md5(json_encode($queryParams) . '_page_' . $page);
 
-        $this->processCategoryImages($categories);
+        return $this->cacheQuery($cacheKey, $this->ttl, function () use ($request) {
+            if ($search = $request?->query('search')) {
+                $search = StringHelper::normalizePersianCharacters($search);
+            }
 
-        $result = $query->select('Code', 'Name', 'Comment', 'PicName')->paginate(8);
-        $result->appends(['search' => $search]);
+            $query = CategoryModel::where('CodeCompany', $this->active_company)
+                ->when($search, function ($query, $search) {
+                    return $query->where('Name', 'like', "%{$search}%");
+                })
+                ->orderBy('Code', 'DESC');
 
-        return $result;
+            $categories = $query->paginate(8);
+
+            $this->processCategoryImages($categories);
+
+            $categories->setCollection($categories->getCollection()->map(function ($item) {
+                unset($item->Pic);
+                return $item;
+            }));
+
+            return $categories;
+        })->appends($request->query());
     }
-
 
     public function listMenuCategories()
     {
-        $baseQuery = CategoryModel::where('CodeCompany', $this->active_company)->orderBy('Code', 'DESC');
+        return $this->cacheQuery('menu_categories', $this->ttl, function () {
 
-        $categories = $baseQuery->limit(18)->get();
+            $baseQuery = CategoryModel::where('CodeCompany', $this->active_company)->orderBy('Code', 'DESC');
 
-        $this->processCategoryImages($categories);
+            $categories = $baseQuery->limit(18)->get();
 
-        $categories = $categories->map(function ($item) {
-            unset($item->Pic);
-            return $item;
+            $this->processCategoryImages($categories);
+
+            $categories = $categories->map(function ($item) {
+                unset($item->Pic);
+                return $item;
+            });
+
+            return $categories;
         });
-
-        return $categories;
     }
-
 
     protected function processCategoryImages($categories)
     {
@@ -71,7 +87,7 @@ class CategoryService
                 }
 
                 if (!empty($category->Pic)) {
-                    $picName = ceil($category->Code) . "_" . rand(10000, 99999);
+                    $picName = Str::random(16);
                     $this->categoryImageService->processCategoryImage($category, $picName);
                     $updateData = ['CChangePic' => 0, 'PicName' => $picName];
                 } else {
