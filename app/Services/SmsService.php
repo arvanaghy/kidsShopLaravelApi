@@ -7,10 +7,18 @@ use Illuminate\Support\Facades\Log;
 
 class SmsService
 {
-    protected $baseUrl = 'https://webone-sms.ir/SMSInOutBox/SendSms';
-    protected $username = '09354278334';
-    protected $password = '414411';
-    protected $from = '10002147';
+    protected $baseUrl;
+    protected $username;
+    protected $password;
+    protected $from;
+
+    public function __construct()
+    {
+        $this->baseUrl = env('WEB_ONE_BASE_URL');
+        $this->username = env('WEB_ONE_USERNAME');
+        $this->password = env('WEB_ONE_PASSWORD');
+        $this->from = env('WEB_ONE_FROM');
+    }
 
     public function send($phoneNumber, $message)
     {

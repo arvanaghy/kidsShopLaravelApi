@@ -8,6 +8,7 @@ use App\Models\CustomerModel;
 use App\Repositories\CustomerRepository;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
+use Illuminate\Support\Facades\DB;
 
 class CustomerService
 {
@@ -20,7 +21,7 @@ class CustomerService
         $this->customerRepository = $customerRepository;
         $this->active_company = $companyService->getActiveCompany();
 
-        if (!$this->active_company) {
+        if ($this->active_company) {
             $this->financial_period = $companyService->getFinancialPeriod($this->active_company);
         }
     }
@@ -179,6 +180,7 @@ class CustomerService
 
         if ($this->isVerified($customer->Code)) {
             return [
+                'sms_code' => null,
                 'customer' => $customer,
                 'status_code' => 201
             ];
@@ -189,6 +191,7 @@ class CustomerService
         SendSmsJob::dispatchSync($phone, $smsText);
 
         return [
+            'sms_code' => $smsCode,
             'customer' => $customer,
             'status_code' => 202
         ];
@@ -238,8 +241,9 @@ class CustomerService
             $smsText = "کیدزشاپ، کد ورود به سیستم: {$smsCode}";
             SendSmsJob::dispatchSync($phone, $smsText);
 
+
             return [
-                'message' => 'کاربری با این شماره همراه قبلا ثبت شده است',
+                'message' => '.کاربری با این شماره همراه قبلا ثبت شده است کد ورود به سیستم به شماره شما ارسال گردید',
                 'sms' => $smsCode,
                 'status_code' => 200
             ];
@@ -288,11 +292,25 @@ class CustomerService
             $smsText = "کیدزشاپ، کد ورود به سیستم: {$smsCode}";
             SendSmsJob::dispatchSync($phone, $smsText);
 
+            $admins = $this->customerRepository->fetchAdminsList();
+            if ($admins) {
+                foreach ($admins as $admin) {
+                    $adminPhone = $admin->Mobile;
+                    $adminSmsText = 'یک کاربر جدید با شماره همراه ' . $phone . ' و نام ' . $name . ' ثبت شده است';
+                    SendSmsJob::dispatchSync($adminPhone, $adminSmsText);
+                }
+            }
+
             return [
                 'message' => 'ثبت نام با موفقیت انجام شد و کد پیامک ارسال گردید',
                 'sms' => $smsCode,
                 'status_code' => 201
             ];
         });
+    }
+
+    public function customerCategory($Code)
+    {
+        return CustomerGroupModel::where('Code', $Code)->firstOrFail();
     }
 }

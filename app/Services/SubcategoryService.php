@@ -390,24 +390,20 @@ class SubcategoryService
 
         $queryParams = $request ? $request->query() : [];
         $page = $request ? $request->query('subcategory_page', 1) : 1;
-        $cacheKey = 'list_category_subcategories_' . md5(json_encode($queryParams) . '_page_' . $page);
+        $cacheKey = 'list_category_subcategories_' . $Code . '_' . md5(json_encode($queryParams) . '_page_' . $page);
 
         $results = Cache::remember($cacheKey, 60 * 30, function () use ($Code) {
-            $baseQuery = SubCategoryModel::select('Pic', 'Code', 'CChangePic', 'PicName')
-                ->where('CodeCompany', $this->active_company)
-                ->where('CodeGroup', $Code)
-                ->orderBy('Code', 'DESC');
+            $subcategories = SubCategoryModel::where('CodeCompany', $this->active_company)
+                ->where('CodeGroup', $Code)->orderBy('Code', 'DESC')->paginate(12, ['*'], 'subcategory_page');
 
-            $results = $baseQuery->paginate(12, ['*'], 'subcategory_page');
+            $this->processSubcategoriesListImageCreation($subcategories->items());
 
-            $this->processSubcategoriesListImageCreation($results->items());
-
-            $results->setCollection($results->getCollection()->map(function ($item) {
+            $subcategories->setCollection($subcategories->getCollection()->map(function ($item) {
                 unset($item->Pic);
                 return $item;
             }));
 
-            return $results;
+            return $subcategories;
         });
 
         if ($request) {

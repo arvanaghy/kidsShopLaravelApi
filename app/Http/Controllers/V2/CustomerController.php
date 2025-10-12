@@ -166,4 +166,20 @@ class CustomerController extends Controller
             ], 503);
         }
     }
+
+    public function customerCategory($Code)
+    {
+        try {
+
+            return response()->json([
+                'message' => 'موفقیت آمیز بود',
+                'result' => $this->customerService->customerCategory($Code),
+            ], 200);
+        } catch (Exception $e) {
+            return response()->json([
+                "message" => $e->getMessage(),
+                "result" => null
+            ], 503);
+        }
+    }
 }

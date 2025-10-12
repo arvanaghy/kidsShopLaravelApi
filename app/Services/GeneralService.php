@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\DeviceHeaderImage;
+use App\Repositories\GeneralRepository;
 use App\Services\ImageServices\BannerImageService;
 use App\Traits\Cacheable;
 use Illuminate\Support\Facades\DB;
@@ -13,13 +14,15 @@ class GeneralService
     protected $active_company;
     protected $bannerImageService;
     private $cacheTime = 60 * 30;
+    protected $generalRepository;
 
     use Cacheable;
 
-    public function __construct(CompanyService $companyService, BannerImageService $bannerImageService)
+    public function __construct(CompanyService $companyService, BannerImageService $bannerImageService , GeneralRepository $generalRepository)
     {
         $this->active_company = $companyService->getActiveCompany();
         $this->bannerImageService = $bannerImageService;
+        $this->generalRepository = $generalRepository;
     }
 
     public function getCompanyInfo()
@@ -31,7 +34,7 @@ class GeneralService
 
     public function getCurrencyUnit()
     {
-        return DB::table('UserSetting')->select('MVahed')->first();
+        return $this->generalRepository->getCurrencyUnit();
     }
 
     public function fetchBanners()

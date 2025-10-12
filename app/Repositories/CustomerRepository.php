@@ -31,6 +31,11 @@ class CustomerRepository
         return $customer;
     }
 
+    public function fetchAdminsList()
+    {
+        return CustomerModel::where('CodeCompany', $this->active_company)->where('Owner', 1)->where('Act', 1)->get() ?? [];
+    }
+
     public function logOut($token)
     {
         CustomerModel::where('UToken', $token)

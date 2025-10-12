@@ -61,11 +61,9 @@ class GeneralController extends Controller
         try {
             $unit = $this->generalService->getCurrencyUnit();
             return response()->json([
-                'status' => true,
                 'result' =>
                 [
-                    'status' => true,
-                    'value' => $unit->MVahed,
+                    'value' => $unit,
                     'last_fetched_at' => Carbon::now()->format('Y-m-d H:i:s')
                 ]
             ], 200);

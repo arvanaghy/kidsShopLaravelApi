@@ -15,5 +15,5 @@ use App\Http\Controllers\CheckOutController;
 */
 
 Route::get('/', function () {
-    return view('welcome To Hesma Api , be fun with Ilyas Bey Efendi ');
+    return view('welcome');
 });

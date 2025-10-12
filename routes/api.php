@@ -1,15 +1,11 @@
 <?php
 
-use App\Http\Controllers\CheckOutController;
 use App\Http\Controllers\DevelopController;
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\V1\OrderController;
-use App\Http\Controllers\V1\InvoiceController;
 use App\Http\Controllers\V1\ProductController;
-use App\Http\Controllers\V1\CategoryController;
-use App\Http\Controllers\V1\CustomerController;
-use App\Http\Controllers\V1\GeneralController;
-use App\Http\Controllers\V1\WebPaymentController;
+use App\Http\Controllers\V1\SubCategoriesController;
+use App\Http\Controllers\V1\OrderAndPaymentController;
+
 
 use App\Http\Controllers\V2\InnerPages\HomeController as WebHomeController;
 use App\Http\Controllers\V2\InnerPages\SubCategoriesController as WebSubCategoriesController;
@@ -91,8 +87,7 @@ Route::prefix('general')->group(function () {
 
 Route::prefix('v1')->group(function () {
 
-
-     Route::prefix('categories-and-subcategories')->group(function () {
+    Route::prefix('categories-and-subcategories')->group(function () {
         Route::get('/list-category-subcategories-and-products/{Code}', [SubCategoriesController::class, 'listCategorySubcategoriesAndProducts']);
         Route::get('/list-subcategory-products/{Code}', [SubCategoriesController::class, 'listSubcategoryProducts']);
     });
@@ -108,19 +103,9 @@ Route::prefix('v1')->group(function () {
         Route::post('/process-order-and-payment', [OrderAndPaymentController::class, 'process']);
     });
 
+    Route::get('/customer-category/{Code}', [WebCustomerController::class, 'customerCategory']);
 
 
-    Route::get('/checkout-with-order', [WebPaymentController::class, 'checkoutWithOrder']);
-    Route::get('/checkout-without-order', [WebPaymentController::class, 'checkoutWithoutOrder']);
-    Route::get('/checkout-with-order-mobile', [WebPaymentController::class, 'checkoutWithOrderMobile']);
-    Route::get('/checkout-without-order-mobile', [WebPaymentController::class, 'checkoutWithoutOrderMobile']);
-
-    Route::get('/customer-category/{Code}', [CustomerController::class, 'customerCategory']);
-
-
-    Route::middleware('customerConfirm')->group(function () {
-        Route::post('/submit-order', [OrderController::class, 'submit_order']);
-    });
 });
 
 
@@ -138,7 +123,10 @@ Route::prefix('v2')->group(function () {
         Route::get('/show-product/{Code}', [WebProductController::class, 'showProduct']);
     });
 
+    Route::get('/payment-callback', [WebCheckOutController::class, 'paymentCallback'])->name('payment-callback');
+    Route::get('/payment-callback-mobile', [WebCheckOutController::class, 'paymentCallbackMobile'])->name('payment-callback-mobile');
+
     Route::middleware('customerConfirm')->group(function () {
-        Route::post('/process-order-and-payment', [WebOrderAndPaymentController::class, 'process']);
+        Route::post('/process-order-and-payment', [WebOrderAndPaymentController::class, 'processOrderAndPayment']);
     });
 });

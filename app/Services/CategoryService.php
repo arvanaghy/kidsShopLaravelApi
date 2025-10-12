@@ -3,28 +3,25 @@
 namespace App\Services;
 
 use App\Helpers\StringHelper;
-use App\Models\CategoryModel;
+use App\Repositories\CategoryRepository;
 use App\Services\ImageServices\CategoryImageService;
 use App\Traits\Cacheable;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 class CategoryService
 {
-    protected $companyService;
     protected $categoryImageService;
-    protected $active_company;
     private $ttl = 60 * 30;
+    protected $categoryRepository;
 
     use Cacheable;
 
     public function __construct(
-        CompanyService $companyService,
-        CategoryImageService $categoryImageService
+        CategoryImageService $categoryImageService,
+        CategoryRepository $categoryRepository
     ) {
-        $this->companyService = $companyService;
         $this->categoryImageService = $categoryImageService;
-        $this->active_company = $this->companyService->getActiveCompany();
+        $this->categoryRepository = $categoryRepository;
     }
 
     public function listCategories($request = null)
@@ -40,13 +37,7 @@ class CategoryService
                 $search = StringHelper::normalizePersianCharacters($search);
             }
 
-            $query = CategoryModel::where('CodeCompany', $this->active_company)
-                ->when($search, function ($query, $search) {
-                    return $query->where('Name', 'like', "%{$search}%");
-                })
-                ->orderBy('Code', 'DESC');
-
-            $categories = $query->paginate(8);
+            $categories = $this->categoryRepository->listCategories($search);
 
             $this->processCategoryImages($categories);
 
@@ -63,9 +54,7 @@ class CategoryService
     {
         return $this->cacheQuery('menu_categories', $this->ttl, function () {
 
-            $baseQuery = CategoryModel::where('CodeCompany', $this->active_company)->orderBy('Code', 'DESC');
-
-            $categories = $baseQuery->limit(18)->get();
+            $categories = $this->categoryRepository->listMenuCategories();
 
             $this->processCategoryImages($categories);
 
@@ -94,9 +83,7 @@ class CategoryService
                     $updateData = ['CChangePic' => 0, 'PicName' => null];
                 }
 
-                DB::table('KalaGroup')
-                    ->where('Code', $category->Code)
-                    ->update($updateData);
+                $this->categoryRepository->updateCategoryImage($category, $updateData);
             }
         }
     }

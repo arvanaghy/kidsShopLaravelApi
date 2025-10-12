@@ -4,12 +4,10 @@ namespace App\Services;
 
 use App\Helpers\StringHelper;
 use App\Models\BestSellModel;
-use App\Models\ProductImagesModel;
 use App\Models\ProductModel;
 use App\Repositories\ImageUpdater;
 use App\Services\ImageServices\ProductImageService;
 use App\Traits\Cacheable;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 class ProductService
@@ -32,9 +30,9 @@ class ProductService
         $this->productImageService = $productImageService;
         $this->active_company = $this->companyService->getActiveCompany();
         $this->imageUpdater = $imageUpdater;
-        // if (!$this->active_company) {
-        //     $this->financial_period = $this->companyService->getFinancialPeriod($this->active_company);
-        // }
+        if ($this->active_company) {
+            $this->financial_period = $this->companyService->getFinancialPeriod($this->active_company);
+        }
     }
 
     /**
@@ -98,26 +96,15 @@ class ProductService
 
     public function showSingleProduct($product_code)
     {
-        $product = ProductModel::where('Code', $product_code)->firstOrFail();
-        $productImages = ProductImagesModel::where('CodeKala', $product->Code)->get();
-
-        if ($product->CChangePic == 1) {
-            foreach ($productImages as $image) {
-                if ($image->Pic && $image->PicName == null) {
-                    $picName = Str::random(16);
-                    if ($this->productImageService->processProductImage($product, $image, $picName)) {
-                        DB::table('KalaImage')->where('Code', $image->Code)->update(['PicName' => $picName]);
-                    }
-                }
-            }
-            DB::table('Kala')->where('Code', $product->Code)->update(['CChangePic' => 0]);
-        }
-
-        $result = ProductModel::with([
+        $product = ProductModel::with([
             'productSizeColor',
-            'productImages' => fn($query) => $query->select('Code', 'PicName', 'Def', 'CodeKala')
+            'productImages' => fn($query) => $query->select('Code', 'PicName', 'Def', 'CodeKala', 'Pic')
         ])
             ->where('Code', $product_code)
+            ->where('CodeCompany', $this->active_company)
+            ->whereHas('productSizeColor', function ($query) {
+                $query->havingRaw('SUM(Mande) > 0');
+            })
             ->select([
                 'CChangePic',
                 'GCode',
@@ -130,10 +117,35 @@ class ProductService
                 'Name',
                 'Vahed',
                 'SPrice',
-                'PicName'
-            ])->first();
+                'PicName',
+                'created_at'
+            ])
+            ->firstOrFail();
 
-        return $result;
+        if ($product->CChangePic == 1) {
+            $updates = [];
+            foreach ($product->productImages as $image) {
+                if ($image->Pic && $image->PicName == null) {
+                    $picName = Str::random(16);
+                    if ($this->productImageService->processProductImage($product, $image, $picName)) {
+                        $updates[] = ['Code' => $image->Code, 'PicName' => $picName];
+                    }
+                }
+            }
+
+            if (!empty($updates)) {
+                $this->imageUpdater->productImagesUpdate($updates);
+                $product->update(['CChangePic' => 0]);
+            }
+        }
+
+        if ($product->productImages) {
+            $product->productImages->each(function ($image) {
+                unset($image->Pic);
+            });
+        }
+
+        return $product;
     }
 
     /**
@@ -248,7 +260,7 @@ class ProductService
         return $this->cacheQuery('home_page_best_selling_products', $this->ttl, function () {
 
             $baseQuery = BestSellModel::with(['productSizeColor'])
-                // ->where('CodeDoreMali', $this->financial_period)
+                ->where('CodeDoreMali', $this->financial_period)
                 ->whereHas('productSizeColor', function ($query) {
                     $query->havingRaw('SUM(Mande) > 0');
                 })
@@ -530,7 +542,7 @@ class ProductService
 
         $results = $this->cacheQuery($cacheKey, $this->ttl, function () use ($request) {
             $baseQuery = BestSellModel::with(['productSizeColor'])
-                // ->where('CodeDoreMali', $this->financial_period)
+                ->where('CodeDoreMali', $this->financial_period)
                 ->whereHas('productSizeColor', function ($query) {
                     $query->havingRaw('SUM(Mande) > 0');
                 });

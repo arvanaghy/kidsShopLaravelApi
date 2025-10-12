@@ -3,18 +3,31 @@
 namespace App\Services;
 
 use App\Jobs\SendSmsJob;
+use App\Repositories\CustomerRepository;
 
 class EnquireService
 {
-    public function __construct() {}
+    protected $customerRepository;
+    public function __construct(
+        CustomerRepository $customerRepository
+    ) {
+        $this->customerRepository = $customerRepository;
+    }
 
-    // TODO: add admin (Owner) to send admin message
     public function send_enquiry($info = null, $contact = null, $message = null)
     {
         if ($info && $contact && is_numeric($contact) && $message) {
             $userMessageTemplate = 'کاربر گرامی ' . $info . ' با تشکر از تماس شما، پیغام شما با موفقیت دریافت شد';
             SendSmsJob::dispatchSync($contact, $userMessageTemplate);
-            $adminMessageTemplate = 'یک پیغام از ' . $info . ' - ' . $contact . ' - ' . $message . 'دارید';
+
+            $admins = $this->customerRepository->fetchAdminsList();
+            if ($admins) {
+                foreach ($admins as $admin) {
+                    $adminPhone = $admin->Mobile;
+                    $adminSmsText = 'یک پیغام از ' . $info . ' - ' . $contact . ' - ' . $message . 'دارید';
+                    SendSmsJob::dispatchSync($adminPhone, $adminSmsText);
+                }
+            }
         }
     }
 }
