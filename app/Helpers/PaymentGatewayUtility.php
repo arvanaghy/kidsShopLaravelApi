@@ -1,10 +1,9 @@
 <?php
 
-namespace App\Utilities;
+namespace App\Helpers;
 
 use Exception;
 use Illuminate\Support\Facades\Http;
-use Illuminate\Support\Facades\Log;
 
 class PaymentGatewayUtility
 {
@@ -12,11 +11,14 @@ class PaymentGatewayUtility
     protected static $ZARINPAL_API_VERIFICATION_URL;
     protected static $ZARINPAL_API_PURCHASE_URL;
 
-    public function __construct()
+    // Initialize static properties directly
+    protected static function initialize()
     {
-        self::$ZARINPAL_MERCHANT_ID = env('ZARINPAL_MERCHANT_ID');
-        self::$ZARINPAL_API_VERIFICATION_URL = env('ZARINPAL_API_VERIFICATION_URL');
-        self::$ZARINPAL_API_PURCHASE_URL = env('ZARINPAL_API_PURCHASE_URL');
+        if (!self::$ZARINPAL_MERCHANT_ID) {
+            self::$ZARINPAL_MERCHANT_ID = env('ZARINPAL_MERCHANT_ID', '87955b91-59e8-4753-af27-b2815b9c6b40');
+            self::$ZARINPAL_API_VERIFICATION_URL = env('ZARINPAL_API_VERIFICATION_URL', 'https://api.zarinpal.com/pg/v4/payment/verify.json');
+            self::$ZARINPAL_API_PURCHASE_URL = env('ZARINPAL_API_PURCHASE_URL', 'https://api.zarinpal.com/pg/v4/payment/request.json');
+        }
     }
 
     private static function validateRequest($request): void
@@ -26,8 +28,9 @@ class PaymentGatewayUtility
         }
     }
 
-    public static function checkThirdPartyPayment($request): array
+    public static function checkThirdPartyPayment($request)
     {
+        self::initialize();
         self::validateRequest($request);
 
         $data = [
@@ -44,28 +47,33 @@ class PaymentGatewayUtility
 
             $result = $response->json();
 
-            if (empty($result)) {
-                throw new Exception('پاسخ نامعتبر از درگاه پرداخت');
-            }
+            // if (empty($result)) {
+            //     throw new Exception('پاسخ نامعتبر از درگاه پرداخت');
+            // }
 
+            // if (!empty($result['errors'])) {
+            //     throw new Exception($result['errors']['message']);
+            // }
             return $result;
         } catch (\Exception $e) {
-            throw new Exception('خطا در درگاه پرداخت: ' . $e->getMessage());
+            throw new Exception('خطا در پرداخت: ' . $e->getMessage());
         }
     }
 
-    public static function purchaseThirdPartyPayment($user, $order, $sOrder)
+    public static function purchaseThirdPartyPayment($user, $orderCode, $sOrder)
     {
+        self::initialize();
+
         $paymentData = [
             'merchant_id' => self::$ZARINPAL_MERCHANT_ID,
             'amount' => (int)$sOrder->JamKK,
             'callback_url' => env('ZARINPAL_CALLBACK_URL_WEB'),
-            'description' => "واریز کاربر {$user->Name} برای پیش فاکتور {$order->Code}",
+            'description' => "واریز کاربر {$user->Name} برای پیش فاکتور {$orderCode}",
             'metadata' => [
                 'email' => $user->Email,
                 'mobile' => $user->Mobile,
                 'name' => $user->Name,
-                'order_id' => (string)$order->Code
+                'order_id' => (string)$orderCode
             ]
         ];
 

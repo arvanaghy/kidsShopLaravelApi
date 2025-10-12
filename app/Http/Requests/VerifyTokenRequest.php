@@ -11,7 +11,7 @@ class VerifyTokenRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        return false;
+        return true;
     }
 
     /**
@@ -23,6 +23,7 @@ class VerifyTokenRequest extends FormRequest
     {
         return [
             'UToken' => 'required',
+            'phone_number' => 'required|min:10|regex:/^09[0-9]{9}$/',
         ];
     }
 
@@ -30,6 +31,9 @@ class VerifyTokenRequest extends FormRequest
     {
         return [
             'UToken.required' => 'اطلاعاتی در دستگاه ذخیره نشده است',
+            'phone_number.required' => 'شماره موبایل را وارد کنید',
+            'phone_number.regex' => 'شماره موبایل معتبر نیست',
+            'phone_number.min' => 'شماره موبایل باید 10 رقم باشد',
         ];
     }
 }

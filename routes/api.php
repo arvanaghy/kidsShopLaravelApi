@@ -36,6 +36,7 @@ use App\Http\Controllers\V2\Profile\InvoiceController as WebInvoiceController;
 Route::prefix('develop')->group(function () {
     Route::get('/reset-images', [DevelopController::class, 'resetCChangePic']);
     Route::get('/test-redis', [DevelopController::class, 'testRedis']);
+    Route::get('/test-order', [DevelopController::class, 'testOrder']);
 });
 
 Route::prefix('general')->group(function () {
@@ -104,8 +105,6 @@ Route::prefix('v1')->group(function () {
     });
 
     Route::get('/customer-category/{Code}', [WebCustomerController::class, 'customerCategory']);
-
-
 });
 
 

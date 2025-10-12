@@ -46,7 +46,7 @@ class CustomerController extends Controller
             $token = $request->bearerToken();
             $user = $this->customerService->updateUserAddress($validated, $token);
             return response()->json([
-                'message' => 'موفقیت آمیز بود',
+                'message' => 'بروزرسانی با موفقیت انجام شد',
                 'result' => $user,
             ], 202);
         } catch (Exception $e) {
@@ -65,13 +65,13 @@ class CustomerController extends Controller
             $user = $this->customerService->editUserInfo($validated, $token);
             return response()->json([
                 'result' => $user,
-                "message" => "اطلاعات با موفقیت ثبت گردید"
+                "message" => "اطلاعات با موفقیت بروزرسانی شد",
             ], 202);
         } catch (Exception $e) {
             return response()->json([
                 'result' => null,
                 'message' => $e->getMessage(),
-            ], 503);
+            ], $e->getCode() ?: 503);
         }
     }
 
@@ -79,11 +79,11 @@ class CustomerController extends Controller
     {
         try {
             $validated = $request->validated();
-            $this->customerService->resendSms($validated['phone']);
+            $smsCode = $this->customerService->resendSms($validated['phone_number']);
 
             return response()->json([
-                'message' => 'پیغام شما با موفقیت دریافت شد',
-                'result' => null,
+                'message' => 'کد ورود مجدد ارسال شد',
+                'result' => $smsCode,
             ], 202);
         } catch (Exception $e) {
             return response()->json([
@@ -100,7 +100,7 @@ class CustomerController extends Controller
             $customer = $this->customerService->verifySms($validated['phone_number'], $validated['sms']);
 
             return response()->json([
-                'message' => 'پیغام شما با موفقیت دریافت شد',
+                'message' => 'ورود با موفقیت انجام شد',
                 'result' => $customer,
             ], 202);
         } catch (Exception $e) {
@@ -115,17 +115,17 @@ class CustomerController extends Controller
     {
         try {
             $validated = $request->validated();
-            $customer = $this->customerService->verifyToken($validated['token']);
+            $customer = $this->customerService->verifyToken($validated['UToken']);
 
             return response()->json([
-                'message' => 'پیغام شما با موفقیت دریافت شد',
+                'message' => 'توکن با موفقیت تایید شد',
                 'result' => $customer,
             ], 202);
         } catch (Exception $e) {
             return response()->json([
                 "message" => $e->getMessage(),
                 "result" => null
-            ], 503);
+            ], $e->getCode() ?: 503);
         }
     }
 
@@ -156,14 +156,15 @@ class CustomerController extends Controller
 
             $result = $this->customerService->login($validated['phone_number']);
             return response()->json([
-                'message' => 'ورود به سیستم با موفقیت انجام پذیرفت',
-                'result' => $result['customer'],
+                'message' => $result['message'],
+                'customer' => $result['customer'],
+                'sms_code' => $result['sms_code']
             ], $result['status_code']);
         } catch (Exception $e) {
             return response()->json([
                 "message" => $e->getMessage(),
                 "result" => null
-            ], 503);
+            ], $e->getCode() ?: 503);
         }
     }
 

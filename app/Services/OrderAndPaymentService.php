@@ -7,9 +7,10 @@ use App\Models\OrderModel;
 use App\Models\ProductModel;
 use App\Models\WebPaymentModel;
 use App\Repositories\CustomerRepository;
-use App\Utilities\PaymentGatewayUtility;
+use App\Helpers\PaymentGatewayUtility;
 use Illuminate\Support\Facades\DB;
 use Exception;
+use Illuminate\Support\Facades\Log;
 
 class OrderAndPaymentService
 {
@@ -26,27 +27,32 @@ class OrderAndPaymentService
         $this->customerRepository = $customerRepository;
         $this->paymentGatewayUtility = $paymentGatewayUtility;
         $this->activeCompany = $companyService->getActiveCompany();
-        $this->financialPeriod = $companyService->getFinancialPeriod($this->activeCompany);
+        if ($this->activeCompany) {
+            $this->financialPeriod = $companyService->getFinancialPeriod($this->activeCompany);
+        }
     }
 
     public function processOrderAndPayment($request): string
     {
-        $user = $this->customerRepository->findByToken($request->bearerToken());
-        $orderData = $request->all();
+        try {
+            $user = $this->customerRepository->findByToken($request->bearerToken());
+            $orderData = $request->all();
 
-        return DB::transaction(function () use ($user, $orderData) {
-            $this->checkProductsStack($orderData['products']);
-            $transfer = $this->validateTransfer($orderData['CodeKhadamat']);
-            $order = $this->createOrder($user, $orderData, $transfer);
-            $this->processOrderItems($order->Code, $orderData['products']);
-            $sOrder = $this->calculateOrderTotal($order->Code);
 
-            $paymentUrl = $this->initiatePayment($user, $order, $sOrder);
 
-            $this->sendNotifications($user, $order->Code, $sOrder->JamKK);
-
-            return $paymentUrl;
-        });
+            return DB::transaction(function () use ($user, $orderData) {
+                $this->checkProductsStack($orderData['products']);
+                $transfer = $this->validateTransfer($orderData['CodeKhadamat']);
+                $orderCode = $this->createOrder($user, $orderData, $transfer);
+                $this->processOrderItems($orderCode, $orderData['products']);
+                $sOrder = $this->calculateOrderTotal($orderCode);
+                $paymentUrl = $this->initiatePayment($user, $orderCode, $sOrder);
+                $this->sendNotifications($user, $orderCode, $sOrder->JamKK);
+                return $paymentUrl;
+            });
+        } catch (Exception $e) {
+            throw new Exception($e->getMessage(), $e->getCode());
+        }
     }
 
     private function validateTransfer($codeKhadamat)
@@ -60,27 +66,25 @@ class OrderAndPaymentService
 
     private function createOrder($user, $orderData, $transfer)
     {
-        $order = new OrderModel();
-        $order->Code = OrderModel::max('Code') + 1;
-        $order->CCode = $user->Code;
-        $order->CodeDoreMali = $this->financialPeriod;
-        $order->CodeKhadamat = $orderData['CodeKhadamat'];
-        $order->MKhadamat = $transfer->Mablag ?? 0;
-        $order->status = 'سفارش ثبت شده و در انتظار پرداخت می باشد';
-        $order->save();
-
-        if (!$order->Code) {
-            throw new Exception('خطا در ساخت سفارش', 500);
+        try {
+            OrderModel::create([
+                'CCode' => $user->Code,
+                'CodeDoreMali' => $this->financialPeriod ?? 1,
+                'CodeKhadamat' => $orderData['CodeKhadamat'],
+                'MKhadamat' => $transfer->Mablag ?? 0,
+                'status' => 'سفارش ثبت شده و در انتظار پرداخت می باشد',
+            ]);
+            return OrderModel::where('CCode', $user->Code)->orderBy('Code', 'desc')->first()->Code;
+        } catch (Exception $e) {
+            throw new Exception('خطا در ایجاد سفارش' . '_' . '_' . $e->getMessage(), $e->getCode());
         }
-
-        return $order;
     }
 
     private function checkProductsStack($products)
     {
         foreach ($products as $product) {
             $product = ProductModel::whereHas('productSizeColor', function ($query) use ($product) {
-                $query->havingRaw('SUM(Mande) ', '>=', $product['Tedad']);
+                $query->havingRaw('SUM(Mande) >= ?', [$product['Tedad']]);
                 $query->where('CodeKala', $product['KCode']);
             })->first();
 
@@ -92,6 +96,10 @@ class OrderAndPaymentService
 
     private function processOrderItems($orderCode, $products)
     {
+
+        if ($orderCode <= 0) {
+            throw new Exception('کد سفارش نامعتبر است', 500);
+        }
         foreach ($products as $value) {
             $product = DB::table('Kala')
                 ->select('SPrice')
@@ -128,22 +136,22 @@ class OrderAndPaymentService
         return $sOrder;
     }
 
-    private function initiatePayment($user, $order, $sOrder): string
+    private function initiatePayment($user, $orderCode, $sOrder): string
     {
 
-        $response = $this->paymentGatewayUtility->purchaseThirdPartyPayment($user, $order, $sOrder);
+        $response = $this->paymentGatewayUtility->purchaseThirdPartyPayment($user, $orderCode, $sOrder);
 
         if (empty($response['errors']) && $response['data']['code'] == 100) {
             WebPaymentModel::create([
                 'TrID' => $response['data']['authority'],
                 'UUID' => $response['data']['authority'],
-                'SCode' => $order->Code,
+                'SCode' => $orderCode,
                 'CCode' => (float)$user->Code,
                 'Mablag' => (int)$sOrder->JamKK,
-                'Comment' => "واریز کاربر {$user->Name} برای پیش فاکتور {$order->Code}",
+                'Comment' => "واریز کاربر {$user->Name} برای پیش فاکتور {$orderCode}",
             ]);
 
-            return env('ZARINPAL_API_PAYMENT_URL')."{$response['data']['authority']}";
+            return env('ZARINPAL_API_PAYMENT_URL') . "{$response['data']['authority']}";
         }
 
         throw new Exception($response['errors']['message'] ?? 'خطا در ارتباط با زرین پال', 500);

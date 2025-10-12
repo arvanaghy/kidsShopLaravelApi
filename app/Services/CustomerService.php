@@ -76,20 +76,16 @@ class CustomerService
 
     protected function generateToken($customer_id, $customer_phone_number, $request)
     {
-        $token = Hash::make($customer_id . $customer_phone_number . time());
+        $token = Hash::make($customer_id . $customer_phone_number . $request->ip());
 
-        CustomerModel::where('Code', $customer_id)
-            ->where('CodeCompany', $this->active_company)
-            ->update([
-                'UToken' => $token,
-                'VerifiedAT' => now(),
-                'DeviceInfo' => $request->ip(),
-                'SMSTime' => null,
-                'SMSCode' => null,
-                'updated_at' => null,
-            ]);
-
-        return $token;
+        CustomerModel::where('Code', $customer_id)->where('CodeCompany', $this->active_company)->update([
+            'UToken' => $token,
+            'VerifiedAT' => now(),
+            'DeviceInfo' => $request->ip(),
+            'SMSTime' => null,
+            'SMSCode' => null,
+            'updated_at' => null,
+        ]);
     }
 
     public function logOut($token)
@@ -99,12 +95,16 @@ class CustomerService
 
     public function updateUserAddress(array $validated, $token)
     {
-        return CustomerModel::where('UToken', $token)->update($validated);
+        CustomerModel::where('UToken', $token)->update($validated);
+
+        return CustomerModel::where('UToken', $token)->first();
     }
 
     public function editUserInfo(array $validated, $token)
     {
-        return CustomerModel::where('UToken', $token)->update($validated);
+        CustomerModel::where('UToken', $token)->update($validated);
+
+        return CustomerModel::where('UToken', $token)->first();
     }
 
     public function resendSms($phone)
@@ -130,13 +130,13 @@ class CustomerService
         $smsText = "کیدزشاپ، کد ورود به سیستم: {$smsCode}";
 
         SendSmsJob::dispatchSync($phone, $smsText);
+
+        return $smsCode;
     }
 
     public function verifySms($phone, $code)
     {
-        $customer = CustomerModel::where('Mobile', $phone)
-            ->where('CodeCompany', $this->active_company)
-            ->first();
+        $customer = CustomerModel::where('Mobile', $phone)->where('CodeCompany', $this->active_company)->first();
 
         if (!$customer) {
             throw new ModelNotFoundException('مشتری با این شماره تلفن یافت نشد', 404);
@@ -156,7 +156,10 @@ class CustomerService
 
         $this->generateToken($customer->Code, $customer->Mobile, request());
 
-        return $customer;
+        $result = CustomerModel::where('Mobile', $phone)->where('CodeCompany', $this->active_company)->first();
+
+
+        return $result;
     }
 
     public function verifyToken($token)
@@ -166,9 +169,7 @@ class CustomerService
 
     public function login($phone)
     {
-        $customer = CustomerModel::where('Mobile', $phone)
-            ->where('CodeCompany', $this->active_company)
-            ->first();
+        $customer = CustomerModel::where('Mobile', $phone)->where('CodeCompany', $this->active_company)->first();
 
         if (!$customer) {
             throw new ModelNotFoundException('کاربری با این شماره تلفن وجود ندارد. لطفا ثبت نام کنید', 404);
@@ -182,7 +183,8 @@ class CustomerService
             return [
                 'sms_code' => null,
                 'customer' => $customer,
-                'status_code' => 201
+                'status_code' => 201,
+                'message' => 'شما قبلا وارد شده اید'
             ];
         }
 
@@ -193,6 +195,7 @@ class CustomerService
         return [
             'sms_code' => $smsCode,
             'customer' => $customer,
+            'message' => 'کد ورود به سیستم ارسال شد',
             'status_code' => 202
         ];
     }

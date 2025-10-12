@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\OrderModel;
 use App\Models\ProductImagesModel;
 use App\Services\CompanyService;
 use Exception;
@@ -46,6 +47,17 @@ class DevelopController extends Controller
             $redis = Redis::connection('cache');
             $redis->ping();
             return "اتصال به Redis (اتصال cache) برقرار است!";
+        } catch (\Exception $e) {
+            return "خطا در اتصال به Redis: " . $e->getMessage();
+        }
+    }
+
+    public function testOrder()
+    {
+        try {
+
+            $code = OrderModel::max('Code') + 1 ?? 1;
+            return $code;
         } catch (\Exception $e) {
             return "خطا در اتصال به Redis: " . $e->getMessage();
         }

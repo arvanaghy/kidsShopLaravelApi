@@ -7,7 +7,7 @@ use App\Models\WebPaymentModel;
 use App\Repositories\CustomerRepository;
 use App\Repositories\GeneralRepository;
 use App\Repositories\InvoiceRepository;
-use App\Utilities\PaymentGatewayUtility;
+use App\Helpers\PaymentGatewayUtility;
 use Exception;
 use Illuminate\Support\Facades\DB;
 
@@ -43,13 +43,12 @@ class CheckoutService
 
         $thirdPartyResult = PaymentGatewayUtility::checkThirdPartyPayment($paymentResult);
 
+        if (isset($thirdPartyResult['data']['code']) && $thirdPartyResult['data']['code'] == 100) {
+            return DB::transaction(function () use ($paymentResult, $thirdPartyResult) {
+                $customer = $this->customerRepository->findByCode($paymentResult->CCode);
+                $bankAccount = $this->invoiceRepository->getBankAccount();
+                $currencyUnit = $this->generalRepository->getCurrencyUnit();
 
-        return DB::transaction(function () use ($paymentResult, $thirdPartyResult) {
-            $customer = $this->customerRepository->findByCode($paymentResult->CCode);
-            $bankAccount = $this->invoiceRepository->getBankAccount();
-            $currencyUnit = $this->generalRepository->getCurrencyUnit();
-
-            if (isset($thirdPartyResult['data']['code']) && $thirdPartyResult['data']['code'] == 100) {
                 $paymentResult->update(['UUID' => $thirdPartyResult['data']['ref_id']]);
 
                 DB::table('SOrder')
@@ -76,18 +75,16 @@ class CheckoutService
                     'Mablag' => $paymentResult->Mablag,
                     'Babat' => "{$paymentResult->Comment} با کد رهگیری {$thirdPartyResult['data']['ref_id']}",
                 ]);
-
                 return $thirdPartyResult;
-            }
-
+            });
+        } else {
             DB::table('SOrder')
                 ->where('Code', $paymentResult->SCode)
                 ->update([
-                    'CPardakht' => true,
+                    'CPardakht' => false,
                     'status' => 'سفارش ثبت شده، پرداخت با خطا همراه بوده است',
                 ]);
-
             throw new Exception($thirdPartyResult['errors']['message'] ?? 'Payment verification failed', $thirdPartyResult['errors']['code'] ?? 500);
-        });
+        }
     }
 }
