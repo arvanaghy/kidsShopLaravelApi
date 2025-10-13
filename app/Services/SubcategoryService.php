@@ -8,7 +8,7 @@ use App\Models\SubCategoryModel;
 use App\Services\ImageServices\CategoryImageService;
 use App\Services\ImageServices\ProductImageService;
 use App\Services\ImageServices\SubcategoryImageService;
-use Illuminate\Support\Facades\Cache;
+use App\Traits\Cacheable;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
@@ -21,6 +21,9 @@ class SubcategoryService
     protected $active_company;
     protected $companyService;
     protected $financial_period = null;
+    protected $ttl = 60 * 30;
+
+    use Cacheable;
 
 
     public function __construct(SubcategoryImageService $subcategoryImageService, CompanyService $companyService, CategoryImageService $categoryImageService, ProductImageService $productImageService)
@@ -207,7 +210,7 @@ class SubcategoryService
 
         if (!$hasRequestFilter) {
             $cacheKey = $cacheKeyPrefix . '_all_' . $type . '_' . $Code;
-            return Cache::remember($cacheKey, 60 * 30, function () use ($query) {
+            return $this->cacheQuery($cacheKey, $this->ttl, function () use ($query) {
                 $query = $query
                     ->whereHas('productSizeColor', function ($subQuery) {
                         $subQuery->havingRaw('SUM(Mande) > 0');
@@ -249,7 +252,7 @@ class SubcategoryService
 
         $cacheKey = $cacheKeyPrefix . '_' . ($productCodes ? md5(json_encode($productCodes)) : 'empty');
 
-        return Cache::remember($cacheKey, 60 * 30, function () use ($query, $productCodes) {
+        return $this->cacheQuery($cacheKey, $this->ttl, function () use ($query, $productCodes) {
             $query = $query->whereHas('productSizeColor', function ($subQuery) {
                 $subQuery->havingRaw('SUM(Mande) > 0');
             })
@@ -308,7 +311,7 @@ class SubcategoryService
 
         if (!$hasRequestFilter) {
             $cacheKey = $cacheKeyPrefix . '_all_' . $type;
-            return Cache::remember($cacheKey, 60 * 30, function () use ($query) {
+            return $this->cacheQuery($cacheKey, $this->ttl, function () use ($query) {
                 $query = $query->whereHas('productSizeColor', function ($subQuery) {
                     $subQuery->havingRaw('SUM(Mande) > 0');
                 })
@@ -347,7 +350,7 @@ class SubcategoryService
 
         $cacheKey = $cacheKeyPrefix . '_' . ($productCodes ? md5(json_encode($productCodes)) : 'empty');
 
-        return Cache::remember($cacheKey, 60 * 30, function () use ($query, $productCodes) {
+        return $this->cacheQuery($cacheKey, $this->ttl, function () use ($query, $productCodes) {
             $query = $query->whereHas('productSizeColor', function ($subQuery) {
                 $subQuery->havingRaw('SUM(Mande) > 0');
             })
@@ -385,6 +388,62 @@ class SubcategoryService
         });
     }
 
+    protected function getProductsBySubcategory($sCode)
+    {
+        $cacheKey = "products_by_subcategory_{$sCode}";
+        $products = $this->cacheQuery($cacheKey, $this->ttl, function () use ($sCode) {
+            $query = ProductModel::with(['productSizeColor'])
+                ->where('CodeCompany', $this->active_company)
+                ->whereHas('productSizeColor', function ($query) {
+                    $query->havingRaw('SUM(Mande) > 0');
+                })
+                ->where('CShowInDevice', 1)
+                ->select([
+                    'GCode',
+                    'GName',
+                    'SCode',
+                    'SName',
+                    'Code',
+                    'CodeKala',
+                    'PicName',
+                ])
+                ->where('SCode', $sCode)
+                ->whereNotNull('PicName')
+                ->orderBy('Code', 'ASC')
+                ->limit(10)
+                ->get();
+            return $query;
+        });
+        return $products;
+    }
+
+    protected function setRandomProductImages($subcategories)
+    {
+        foreach ($subcategories as $subcategory) {
+            $products = $this->getProductsBySubcategory($subcategory->Code);
+
+
+            $randomProduct = null;
+            if ($products->isNotEmpty()) {
+                $validProducts = $products->whereNotNull('PicName');
+                if ($validProducts->isNotEmpty()) {
+                    $randomProduct = $validProducts->random(1)->first();
+                }
+            }
+
+            if ($randomProduct && !empty($randomProduct->PicName)) {
+                $updateData = [
+                    'CChangePic' => 0,
+                    'PicName' => $randomProduct->GCode . "/" . $randomProduct->SCode . "/" . $randomProduct->PicName
+                ];
+            } else {
+                $updateData = ['CChangePic' => 0, 'PicName' => null];
+            }
+
+            DB::table('KalaSubGroup')->where('Code', $subcategory->Code)->update($updateData);
+        }
+    }
+
     public function listCategorySubcategories($request, $Code)
     {
 
@@ -392,16 +451,17 @@ class SubcategoryService
         $page = $request ? $request->query('subcategory_page', 1) : 1;
         $cacheKey = 'list_category_subcategories_' . $Code . '_' . md5(json_encode($queryParams) . '_page_' . $page);
 
-        $results = Cache::remember($cacheKey, 60 * 30, function () use ($Code) {
-            $subcategories = SubCategoryModel::where('CodeCompany', $this->active_company)
+        $results = $this->cacheQuery($cacheKey, $this->ttl, function () use ($Code) {
+            $subcategories = SubCategoryModel::select('Code', 'Name', 'PicName')->where('CodeCompany', $this->active_company)
                 ->where('CodeGroup', $Code)->orderBy('Code', 'DESC')->paginate(12, ['*'], 'subcategory_page');
 
-            $this->processSubcategoriesListImageCreation($subcategories->items());
+            $this->setRandomProductImages($subcategories->items());
+            // $this->processSubcategoriesListImageCreation($subcategories->items());
 
-            $subcategories->setCollection($subcategories->getCollection()->map(function ($item) {
-                unset($item->Pic);
-                return $item;
-            }));
+            // $subcategories->setCollection($subcategories->getCollection()->map(function ($item) {
+            //     unset($item->Pic);
+            //     return $item;
+            // }));
 
             return $subcategories;
         });
@@ -418,7 +478,7 @@ class SubcategoryService
     public function fetchCategory($Code)
     {
         $cache_key = 'category_' . md5($Code . '_' . $this->active_company);
-        return Cache::remember($cache_key, 60 * 30, function () use ($Code) {
+        return $this->cacheQuery($cache_key, $this->ttl, function () use ($Code) {
 
             $result = SubCategoryModel::where('CodeCompany', $this->active_company)->where('CodeGroup', $Code)->first();
 
@@ -435,7 +495,7 @@ class SubcategoryService
 
         $cahce_key = 'subcategory_' . md5($Code . '_' . $this->active_company);
 
-        return Cache::remember($cahce_key, 60 * 30, function () use ($Code) {
+        return $this->cacheQuery($cahce_key, $this->ttl, function () use ($Code) {
 
             $subcategory = SubCategoryModel::where('CodeCompany', $this->active_company)->where('Code', $Code)->first();
 
@@ -456,7 +516,7 @@ class SubcategoryService
         $subcategoryPage = $request ? $request->query('subcategory_page', 1) : 1;
         $cacheKey = 'list_category_products_' . md5(json_encode($queryParams) . '_category_' . $categoryCode . '_product_page_' . $productPage . '_subcategory_page_' . $subcategoryPage);
 
-        $results = Cache::remember($cacheKey, 60 * 30, function () use ($request, $categoryCode) {
+        $results = $this->cacheQuery($cacheKey, $this->ttl, function () use ($request, $categoryCode) {
             $baseQuery = $this->baseProductQuery();
 
             $baseQuery->where('GCode', $categoryCode);
@@ -489,7 +549,7 @@ class SubcategoryService
         $productPage = $request ? $request->query('product_page', 1) : 1;
         $cacheKey = 'list_subcategory_products_' . md5(json_encode($queryParams) . '_subcategory_' . $subcategoryCode . '_product_page_' . $productPage);
 
-        $results = Cache::remember($cacheKey, 60 * 30, function () use ($request, $subcategoryCode) {
+        $results = $this->cacheQuery($cacheKey, $this->ttl, function () use ($request, $subcategoryCode) {
             $baseQuery = $this->baseProductQuery();
 
             $baseQuery->where('SCode', $subcategoryCode);

@@ -18,7 +18,7 @@ class CategoryRepository
 
     public function listMenuCategories()
     {
-        return CategoryModel::where('CodeCompany', $this->active_company)->orderBy('Code', 'DESC')->limit(18)->get();
+        return CategoryModel::select('Code', 'Name', 'PicName')->where('CodeCompany', $this->active_company)->orderBy('Code', 'DESC')->limit(18)->get();
     }
 
     public function updateCategoryImage($category, $data)
@@ -30,7 +30,7 @@ class CategoryRepository
 
     public function listCategories($search = null)
     {
-        return CategoryModel::where('CodeCompany', $this->active_company)
+        return CategoryModel::select('Code', 'Name', 'PicName')->where('CodeCompany', $this->active_company)
             ->when($search, function ($query, $search) {
                 return $query->where('Name', 'like', "%{$search}%");
             })
