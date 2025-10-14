@@ -160,14 +160,14 @@ class OrderAndPaymentService
     private function sendNotifications($user, $orderCode, $amount)
     {
 
-        $customerSmsText = "مشتری گرامی {$user->Name} پیش فاکتور {$orderCode} به مبلغ {$amount} در سیستم ثبت گردید.";
+        $customerSmsText = "کیدزشاپ .مشتری گرامی {$user->Name} پیش فاکتور {$orderCode} به مبلغ {$amount} در سیستم ثبت گردید.";
         SendSmsJob::dispatchSync($user->Mobile, $customerSmsText);
 
         $adminsList  = $this->customerRepository->fetchAdminsList();
         if ($adminsList) {
             foreach ($adminsList as $admin) {
                 $adminPhone = $admin->Mobile;
-                $adminSmsText = "پیش فاکتور جدید به شماره {$orderCode} به مبلغ {$amount} برای کاربر {$user->Name} ثبت گردید.";
+                $adminSmsText = "کیدزشاپ. پیش فاکتور جدید به شماره {$orderCode} به مبلغ {$amount} برای کاربر {$user->Name} ثبت گردید.";
                 SendSmsJob::dispatchSync($adminPhone, $adminSmsText);
             }
         }

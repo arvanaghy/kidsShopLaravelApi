@@ -68,7 +68,7 @@ class CustomerService
             ->update([
                 'SMSTime' => $expireTime,
                 'SMSCode' => $smsCode,
-                'updated_at' => null, // Disable timestamps for this update
+                'updated_at' => null,
             ]);
 
         return $smsCode;
@@ -127,8 +127,7 @@ class CustomerService
         }
 
         $smsCode = $this->generateSmsCode($customer->Code);
-        $smsText = "کیدزشاپ، کد ورود به سیستم: {$smsCode}";
-
+        $smsText = "کیدزشاپ\nکد ورود به سیستم: {$smsCode}";
         SendSmsJob::dispatchSync($phone, $smsText);
 
         return $smsCode;
@@ -241,7 +240,7 @@ class CustomerService
 
             $smsCode = $this->generateSmsCode($customer->Code);
 
-            $smsText = "کیدزشاپ، کد ورود به سیستم: {$smsCode}";
+            $smsText = "کیدزشاپ\nکد ورود به سیستم: {$smsCode}";
             SendSmsJob::dispatchSync($phone, $smsText);
 
 
@@ -292,14 +291,14 @@ class CustomerService
                 'SMSTime' => $expireTime
             ]);
 
-            $smsText = "کیدزشاپ، کد ورود به سیستم: {$smsCode}";
+            $smsText = "کیدزشاپ\nکد ورود به سیستم: {$smsCode}";
             SendSmsJob::dispatchSync($phone, $smsText);
 
             $admins = $this->customerRepository->fetchAdminsList();
             if ($admins) {
                 foreach ($admins as $admin) {
                     $adminPhone = $admin->Mobile;
-                    $adminSmsText = 'یک کاربر جدید با شماره همراه ' . $phone . ' و نام ' . $name . ' ثبت شده است';
+                    $adminSmsText = 'کیدزشاپ. یک کاربر جدید با شماره همراه ' . $phone . ' و نام ' . $name . ' ثبت شده است';
                     SendSmsJob::dispatchSync($adminPhone, $adminSmsText);
                 }
             }
