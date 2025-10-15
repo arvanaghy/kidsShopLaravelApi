@@ -17,14 +17,14 @@ class EnquireService
     public function send_enquiry($info = null, $contact = null, $message = null)
     {
         if ($info && $contact && is_numeric($contact) && $message) {
-            $userMessageTemplate = "کیدزشاپ.\n کاربر گرامی " . $info . " با تشکر از تماس شما، پیغام شما با موفقیت دریافت شد\n{env('FRONTEND_URL')}";
+            $userMessageTemplate = "کیدزشاپ.کاربرگرامی {$info} باتشکر از پیغام شما.پشتیبانی با شما تماس خواهد گرفت.https://kidsshop110.ir";
             SendSmsJob::dispatchSync($contact, $userMessageTemplate);
 
             $admins = $this->customerRepository->fetchAdminsList();
             if ($admins) {
                 foreach ($admins as $admin) {
                     $adminPhone = $admin->Mobile;
-                    $adminSmsText = "کیدزشاپ.\n مدیر . یک پیغام از " . $info . " - " . $contact . " - " . $message . "دارید\n{env('FRONTEND_URL')}";
+                    $adminSmsText = "کیدزشاپ.پیغام از {$info} باشماره {$contact} به متن: {$message} .https://kidsshop110.ir";
                     SendSmsJob::dispatchSync($adminPhone, $adminSmsText);
                 }
             }

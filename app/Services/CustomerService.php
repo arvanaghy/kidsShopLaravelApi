@@ -127,7 +127,7 @@ class CustomerService
         }
 
         $smsCode = $this->generateSmsCode($customer->Code);
-        $smsText = "کیدزشاپ\nکد ورود به سیستم: {$smsCode}\n{env('FRONTEND_URL')}";
+        $smsText = "کیدزشاپ.کدورود:{$smsCode}.https://kidsshop110.ir";
         SendSmsJob::dispatchSync($phone, $smsText);
 
         return $smsCode;
@@ -156,7 +156,6 @@ class CustomerService
         $this->generateToken($customer->Code, $customer->Mobile, request());
 
         $result = CustomerModel::where('Mobile', $phone)->where('CodeCompany', $this->active_company)->first();
-
 
         return $result;
     }
@@ -188,7 +187,7 @@ class CustomerService
         }
 
         $smsCode = $this->generateSmsCode($customer->Code);
-        $smsText = "کیدزشاپ\nکد ورود به سیستم: {$smsCode}\n{env('FRONTEND_URL')}";
+        $smsText = "کیدزشاپ.کدورود:{$smsCode}.https://kidsshop110.ir";
         SendSmsJob::dispatchSync($phone, $smsText);
 
         return [
@@ -240,7 +239,7 @@ class CustomerService
 
             $smsCode = $this->generateSmsCode($customer->Code);
 
-            $smsText = "کیدزشاپ\nکد ورود به سیستم: {$smsCode}\n{env('FRONTEND_URL')}";
+            $smsText = "کیدزشاپ.کدورود:{$smsCode}.https://kidsshop110.ir";
             SendSmsJob::dispatchSync($phone, $smsText);
 
 
@@ -291,14 +290,14 @@ class CustomerService
                 'SMSTime' => $expireTime
             ]);
 
-            $smsText = "کیدزشاپ\nکد ورود به سیستم: {$smsCode}\n{env('FRONTEND_URL')}";
+            $smsText = "کیدزشاپ.کدورود:{$smsCode}.https://kidsshop110.ir";
             SendSmsJob::dispatchSync($phone, $smsText);
 
             $admins = $this->customerRepository->fetchAdminsList();
             if ($admins) {
                 foreach ($admins as $admin) {
                     $adminPhone = $admin->Mobile;
-                    $adminSmsText = "کیدزشاپ. یک کاربر جدید با شماره همراه ' . $phone . ' و نام ' . $name . ' ثبت شده است\n{env('FRONTEND_URL')}";
+                    $adminSmsText = "کیدزشاپ.کاربر{$name}باشماره تماس{$phone}ثبت نام کرد.https://kidsshop110.ir";
                     SendSmsJob::dispatchSync($adminPhone, $adminSmsText);
                 }
             }
