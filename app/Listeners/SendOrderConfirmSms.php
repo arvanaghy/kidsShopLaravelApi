@@ -25,7 +25,7 @@ class SendOrderConfirmSms
     public function handle(OrderProcessSubmittedEvent $event): void
     {
         $customerSmsText = "کیدزشاپ.مشتری گرامی {$event->user->Name} پیش فاکتور {$event->orderCode} خرید شما به مبلغ {$event->amount} درسیستم ثبت شد.https://kidsshop110.ir";
-        SendSmsJob::dispatchSync($user->Mobile, $customerSmsText);
+        SendSmsJob::dispatchSync($event->user->Mobile, $customerSmsText);
 
         $adminsList  = $this->customerRepository->fetchAdminsList();
         if ($adminsList) {

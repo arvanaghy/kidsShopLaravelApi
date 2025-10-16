@@ -29,12 +29,12 @@ class CustomerController extends Controller
 
             return response()->json([
                 "message" => "خروج از حساب کاربری با موفقیت انجام پذیرفت",
-                "result" => null
+                "customer" => null
             ], 202);
         } catch (Exception $e) {
             return response()->json([
                 "message" => $e->getMessage(),
-                "result" => null
+                "customer" => null
             ], 503);
         }
     }
@@ -47,12 +47,12 @@ class CustomerController extends Controller
             $user = $this->customerService->updateUserAddress($validated, $token);
             return response()->json([
                 'message' => 'بروزرسانی با موفقیت انجام شد',
-                'result' => $user,
+                'customer' => $user,
             ], 202);
         } catch (Exception $e) {
             return response()->json([
                 "message" => $e->getMessage(),
-                "result" => null
+                "customer" => null
             ], 503);
         }
     }
@@ -64,12 +64,12 @@ class CustomerController extends Controller
             $validated = $request->validated();
             $user = $this->customerService->editUserInfo($validated, $token);
             return response()->json([
-                'result' => $user,
+                'customer' => $user,
                 "message" => "اطلاعات با موفقیت بروزرسانی شد",
             ], 202);
         } catch (Exception $e) {
             return response()->json([
-                'result' => null,
+                'customer' => null,
                 'message' => $e->getMessage(),
             ], $e->getCode() ?: 503);
         }
@@ -79,16 +79,16 @@ class CustomerController extends Controller
     {
         try {
             $validated = $request->validated();
-            $smsCode = $this->customerService->resendSms($validated['phone_number']);
+            $this->customerService->resendSms($validated['phone_number']);
 
             return response()->json([
                 'message' => 'کد ورود مجدد ارسال شد',
-                'result' => $smsCode,
+                'customer' => null,
             ], 202);
         } catch (Exception $e) {
             return response()->json([
                 'message' => $e->getMessage(),
-                'result' => null,
+                'customer' => null,
             ], $e->getCode() ?: 503);
         }
     }
@@ -101,12 +101,12 @@ class CustomerController extends Controller
 
             return response()->json([
                 'message' => 'ورود با موفقیت انجام شد',
-                'result' => $customer,
+                'customer' => $customer,
             ], 202);
         } catch (Exception $e) {
             return response()->json([
                 'message' => $e->getMessage(),
-                'result' => null,
+                'customer' => null,
             ], $e->getCode() ?: 503);
         }
     }
@@ -119,12 +119,12 @@ class CustomerController extends Controller
 
             return response()->json([
                 'message' => 'توکن با موفقیت تایید شد',
-                'result' => $customer,
+                'customer' => $customer,
             ], 202);
         } catch (Exception $e) {
             return response()->json([
                 "message" => $e->getMessage(),
-                "result" => null
+                "customer" => null
             ], $e->getCode() ?: 503);
         }
     }
@@ -138,12 +138,12 @@ class CustomerController extends Controller
             $result = $this->customerService->register($validated['phone_number'], $validated['name'], $validated['Address']);
             return response()->json([
                 'message' => $result['message'],
-                'result' => $result['sms'],
+                'customer' => null,
             ], $result['status_code']);
         } catch (Exception $e) {
             return response()->json([
                 "message" => $e->getMessage(),
-                "result" => null
+                "customer" => null
             ], 503);
         }
     }
@@ -158,12 +158,11 @@ class CustomerController extends Controller
             return response()->json([
                 'message' => $result['message'],
                 'customer' => $result['customer'],
-                'sms_code' => $result['sms_code']
             ], $result['status_code']);
         } catch (Exception $e) {
             return response()->json([
                 "message" => $e->getMessage(),
-                "result" => null
+                "customer" => null
             ], $e->getCode() ?: 503);
         }
     }

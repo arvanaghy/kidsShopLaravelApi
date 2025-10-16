@@ -129,8 +129,6 @@ class CustomerService
 
         $smsCode = $this->generateSmsCode($customer->Code);
         event(new CustomerLoginEvent($phone, $smsCode));
-
-        return $smsCode;
     }
 
     public function verifySms($phone, $code)
@@ -190,8 +188,7 @@ class CustomerService
         event(new CustomerLoginEvent($phone, $smsCode));
 
         return [
-            'sms_code' => $smsCode,
-            'customer' => $customer,
+            'customer' => null,
             'message' => 'کد ورود به سیستم ارسال شد',
             'status_code' => 202
         ];
@@ -236,14 +233,25 @@ class CustomerService
                 throw new \Exception('حساب کاربری غیرفعال است', 403);
             }
 
-            $smsCode = $this->generateSmsCode($customer->Code);
+            CustomerModel::where('Mobile', $phone)
+                ->where('CodeCompany', $this->active_company)
+                ->update([
+                    'Name' => $name,
+                    'Address' => $address
+                ]);
+
+            $updatedCustomer = CustomerModel::where('Mobile', $phone)
+                ->where('CodeCompany', $this->active_company)
+                ->first();
+
+            $smsCode = $this->generateSmsCode($updatedCustomer->Code);
 
             event(new CustomerLoginEvent($phone, $smsCode));
 
             return [
                 'message' => '.کاربری با این شماره همراه قبلا ثبت شده است کد ورود به سیستم به شماره شما ارسال گردید',
-                'sms' => $smsCode,
-                'status_code' => 200
+                'customer' => null,
+                'status_code' => 201
             ];
         }
 
@@ -287,12 +295,14 @@ class CustomerService
                 'SMSTime' => $expireTime
             ]);
 
-            event(new CustomerRegisteredEvent($phone, $smsCode , $name));
+            $customer = CustomerModel::where('Mobile', $phone)->where('CodeCompany', $this->active_company)->first();
+
+            event(new CustomerRegisteredEvent($phone, $smsCode, $name));
 
             return [
                 'message' => 'ثبت نام با موفقیت انجام شد و کد پیامک ارسال گردید',
-                'sms' => $smsCode,
-                'status_code' => 201
+                'customer' => null,
+                'status_code' => 200
             ];
         });
     }

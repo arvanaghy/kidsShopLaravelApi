@@ -46,7 +46,6 @@ class OrderAndPaymentService
                 $this->processOrderItems($orderCode, $orderData['products']);
                 $sOrder = $this->calculateOrderTotal($orderCode);
                 $paymentUrl = $this->initiatePayment($user, $orderCode, $sOrder);
-                event(new OrderProcessSubmittedEvent($user, $orderCode, $sOrder->JamKK));
                 return $paymentUrl;
             });
         } catch (Exception $e) {

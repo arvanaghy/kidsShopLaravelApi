@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Events\OrderProcessSubmittedEvent;
 use App\Models\PaymentsModel;
 use App\Models\WebPaymentModel;
 use App\Repositories\CustomerRepository;
@@ -75,6 +76,9 @@ class CheckoutService
                     'Mablag' => $paymentResult->Mablag,
                     'Babat' => "{$paymentResult->Comment} با کد رهگیری {$thirdPartyResult['data']['ref_id']}",
                 ]);
+
+                event(new OrderProcessSubmittedEvent($customer, $paymentResult->SCode, $paymentResult->Mablag));
+
                 return $thirdPartyResult;
             });
         } else {
