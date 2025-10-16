@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Events\OrderProcessSubmittedEvent;
 use App\Jobs\SendSmsJob;
 use App\Models\OrderModel;
 use App\Models\ProductModel;
@@ -38,8 +39,6 @@ class OrderAndPaymentService
             $user = $this->customerRepository->findByToken($request->bearerToken());
             $orderData = $request->all();
 
-
-
             return DB::transaction(function () use ($user, $orderData) {
                 $this->checkProductsStack($orderData['products']);
                 $transfer = $this->validateTransfer($orderData['CodeKhadamat']);
@@ -47,7 +46,7 @@ class OrderAndPaymentService
                 $this->processOrderItems($orderCode, $orderData['products']);
                 $sOrder = $this->calculateOrderTotal($orderCode);
                 $paymentUrl = $this->initiatePayment($user, $orderCode, $sOrder);
-                $this->sendNotifications($user, $orderCode, $sOrder->JamKK);
+                event(new OrderProcessSubmittedEvent($user, $orderCode, $sOrder->JamKK));
                 return $paymentUrl;
             });
         } catch (Exception $e) {
@@ -155,21 +154,5 @@ class OrderAndPaymentService
         }
 
         throw new Exception($response['errors']['message'] ?? 'خطا در ارتباط با زرین پال', 500);
-    }
-
-    private function sendNotifications($user, $orderCode, $amount)
-    {
-
-        $customerSmsText = "کیدزشاپ.مشتری گرامی {$user->Name} پیش فاکتور {$orderCode} خرید شما به مبلغ {$amount} درسیستم ثبت شد.https://kidsshop110.ir";
-        SendSmsJob::dispatchSync($user->Mobile, $customerSmsText);
-
-        $adminsList  = $this->customerRepository->fetchAdminsList();
-        if ($adminsList) {
-            foreach ($adminsList as $admin) {
-                $adminPhone = $admin->Mobile;
-                $adminSmsText = "کیدزشاپ.پیشفاکتور {$orderCode} به مبلغ {$amount} برای {$user->Name} ثبتگردید.https://kidsshop110.ir";
-                SendSmsJob::dispatchSync($adminPhone, $adminSmsText);
-            }
-        }
     }
 }

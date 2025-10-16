@@ -4,8 +4,12 @@ namespace App\Providers;
 
 use App\Events\CustomerLoginEvent;
 use App\Events\CustomerRegisteredEvent;
+use App\Events\EnquireSubmittedEvent;
+use App\Events\OrderProcessSubmittedEvent;
 use App\Listeners\SendAdminNewMemberRegisteredSms;
+use App\Listeners\SendEnquireConfirmSms;
 use App\Listeners\SendLoginSms;
+use App\Listeners\SendOrderConfirmSms;
 use Illuminate\Foundation\Support\Providers\EventServiceProvider as ServiceProvider;
 
 class EventServiceProvider extends ServiceProvider
@@ -23,6 +27,12 @@ class EventServiceProvider extends ServiceProvider
             SendLoginSms::class,
             SendAdminNewMemberRegisteredSms::class,
         ],
+        EnquireSubmittedEvent::class => [
+            SendEnquireConfirmSms::class
+        ],
+        OrderProcessSubmittedEvent::class => [
+            SendOrderConfirmSms::class
+        ]
     ];
 
     /**
