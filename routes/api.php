@@ -38,6 +38,8 @@ Route::prefix('develop')->group(function () {
     // Route::get('/test-redis', [DevelopController::class, 'testRedis']);
     // Route::get('/test-order', [DevelopController::class, 'testOrder']);
     // Route::get('/sms-result', [DevelopController::class, 'smsResult']);
+     Route::get('/send-email', [DevelopController::class, 'sendEmail']);
+
 
 });
 

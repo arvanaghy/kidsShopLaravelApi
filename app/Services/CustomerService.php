@@ -2,7 +2,8 @@
 
 namespace App\Services;
 
-use App\Jobs\SendSmsJob;
+use App\Events\CustomerLoginEvent;
+use App\Events\CustomerRegisteredEvent;
 use App\Models\CustomerGroupModel;
 use App\Models\CustomerModel;
 use App\Repositories\CustomerRepository;
@@ -127,8 +128,7 @@ class CustomerService
         }
 
         $smsCode = $this->generateSmsCode($customer->Code);
-        $smsText = "کیدزشاپ.کدورود:{$smsCode}.https://kidsshop110.ir";
-        SendSmsJob::dispatchSync($phone, $smsText);
+        event(new CustomerLoginEvent($phone, $smsCode));
 
         return $smsCode;
     }
@@ -187,8 +187,7 @@ class CustomerService
         }
 
         $smsCode = $this->generateSmsCode($customer->Code);
-        $smsText = "کیدزشاپ.کدورود:{$smsCode}.https://kidsshop110.ir";
-        SendSmsJob::dispatchSync($phone, $smsText);
+        event(new CustomerLoginEvent($phone, $smsCode));
 
         return [
             'sms_code' => $smsCode,
@@ -239,9 +238,7 @@ class CustomerService
 
             $smsCode = $this->generateSmsCode($customer->Code);
 
-            $smsText = "کیدزشاپ.کدورود:{$smsCode}.https://kidsshop110.ir";
-            SendSmsJob::dispatchSync($phone, $smsText);
-
+            event(new CustomerLoginEvent($phone, $smsCode));
 
             return [
                 'message' => '.کاربری با این شماره همراه قبلا ثبت شده است کد ورود به سیستم به شماره شما ارسال گردید',
@@ -290,17 +287,7 @@ class CustomerService
                 'SMSTime' => $expireTime
             ]);
 
-            $smsText = "کیدزشاپ.کدورود:{$smsCode}.https://kidsshop110.ir";
-            SendSmsJob::dispatchSync($phone, $smsText);
-
-            $admins = $this->customerRepository->fetchAdminsList();
-            if ($admins) {
-                foreach ($admins as $admin) {
-                    $adminPhone = $admin->Mobile;
-                    $adminSmsText = "کیدزشاپ.کاربر{$name}باشماره تماس{$phone}ثبت نام کرد.https://kidsshop110.ir";
-                    SendSmsJob::dispatchSync($adminPhone, $adminSmsText);
-                }
-            }
+            event(new CustomerRegisteredEvent($phone, $smsCode , $name));
 
             return [
                 'message' => 'ثبت نام با موفقیت انجام شد و کد پیامک ارسال گردید',
