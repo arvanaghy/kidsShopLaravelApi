@@ -120,7 +120,11 @@ class ProductService
                 'PicName',
                 'created_at'
             ])
-            ->firstOrFail();
+            ->first();
+
+            if (!$product) {
+                return null;
+            }
 
         if ($product->CChangePic == 1) {
             $updates = [];

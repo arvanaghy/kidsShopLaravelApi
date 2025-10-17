@@ -18,7 +18,7 @@ class GeneralService
 
     use Cacheable;
 
-    public function __construct(CompanyService $companyService, BannerImageService $bannerImageService , GeneralRepository $generalRepository)
+    public function __construct(CompanyService $companyService, BannerImageService $bannerImageService, GeneralRepository $generalRepository)
     {
         $this->active_company = $companyService->getActiveCompany();
         $this->bannerImageService = $bannerImageService;
@@ -91,7 +91,7 @@ class GeneralService
     public function checkOnlinePaymentAvailable()
     {
         return $this->cacheQuery('online_payment_available', $this->cacheTime, function () {
-            return DB::table('AV_ShomareHesab_VIEW')->where('Def', 1)->where('CodeCompany', $this->active_company)->first();
+            return $this->generalRepository->getBankAccount();
         });
     }
 

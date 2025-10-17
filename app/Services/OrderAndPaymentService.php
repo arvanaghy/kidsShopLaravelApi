@@ -9,6 +9,7 @@ use App\Models\ProductModel;
 use App\Models\WebPaymentModel;
 use App\Repositories\CustomerRepository;
 use App\Helpers\PaymentGatewayUtility;
+use App\Repositories\GeneralRepository;
 use Illuminate\Support\Facades\DB;
 use Exception;
 use Illuminate\Support\Facades\Log;
@@ -19,14 +20,16 @@ class OrderAndPaymentService
     protected $activeCompany;
     protected $customerRepository;
     protected $paymentGatewayUtility;
-
+    protected $generalRepository;
     public function __construct(
         CustomerRepository $customerRepository,
         CompanyService $companyService,
-        PaymentGatewayUtility $paymentGatewayUtility
+        PaymentGatewayUtility $paymentGatewayUtility,
+        GeneralRepository $generalRepository
     ) {
         $this->customerRepository = $customerRepository;
         $this->paymentGatewayUtility = $paymentGatewayUtility;
+        $this->generalRepository = $generalRepository;
         $this->activeCompany = $companyService->getActiveCompany();
         if ($this->activeCompany) {
             $this->financialPeriod = $companyService->getFinancialPeriod($this->activeCompany);
@@ -137,7 +140,8 @@ class OrderAndPaymentService
     private function initiatePayment($user, $orderCode, $sOrder): string
     {
 
-        $response = $this->paymentGatewayUtility->purchaseThirdPartyPayment($user, $orderCode, $sOrder);
+        $currency_unit = $this->generalRepository->getCurrencyUnit();
+        $response = $this->paymentGatewayUtility->purchaseThirdPartyPayment($user, $orderCode, $sOrder, $currency_unit);
 
         if (empty($response['errors']) && $response['data']['code'] == 100) {
             WebPaymentModel::create([

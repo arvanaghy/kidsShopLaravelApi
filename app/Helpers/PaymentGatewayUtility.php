@@ -28,15 +28,28 @@ class PaymentGatewayUtility
         }
     }
 
-    public static function checkThirdPartyPayment($request)
+    protected static function checkCurrencyUnit($JamKK, $currency_unit)
+    {
+        if ($currency_unit == 'تومان') {
+            $amount = $JamKK * 10;
+        } else {
+            $amount = $JamKK;
+        }
+
+        return $amount;
+    }
+
+    public static function checkThirdPartyPayment($request, $currency_unit)
     {
         self::initialize();
         self::validateRequest($request);
 
+        $amount = self::checkCurrencyUnit($request->Mablag, $currency_unit);
+
         $data = [
             'merchant_id' => self::$ZARINPAL_MERCHANT_ID,
             'authority' => $request->TrID,
-            'amount' => (int) $request->Mablag,
+            'amount' => (int) $amount,
         ];
 
         try {
@@ -60,13 +73,15 @@ class PaymentGatewayUtility
         }
     }
 
-    public static function purchaseThirdPartyPayment($user, $orderCode, $sOrder)
+    public static function purchaseThirdPartyPayment($user, $orderCode, $sOrder, $currency_unit)
     {
         self::initialize();
 
+        $amount = self::checkCurrencyUnit($sOrder->JamKK, $currency_unit);
+
         $paymentData = [
             'merchant_id' => self::$ZARINPAL_MERCHANT_ID,
-            'amount' => (int)$sOrder->JamKK,
+            'amount' => (int)$amount,
             'callback_url' => env('ZARINPAL_CALLBACK_URL_WEB'),
             'description' => "واریز کاربر {$user->Name} برای پیش فاکتور {$orderCode}",
             'metadata' => [

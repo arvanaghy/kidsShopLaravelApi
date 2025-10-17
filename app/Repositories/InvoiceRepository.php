@@ -5,6 +5,7 @@ namespace App\Repositories;
 use App\Models\InvoiceModel;
 use App\Services\CompanyService;
 use App\Traits\Cacheable;
+use Exception;
 use Illuminate\Support\Facades\DB;
 
 class InvoiceRepository
@@ -16,7 +17,7 @@ class InvoiceRepository
     protected $cacheTime = 60 * 60 * 24 * 30;
 
     public function __construct(
-        CompanyService $companyService
+        CompanyService $companyService,
     ) {
         $this->active_company = $companyService->getActiveCompany();
     }
@@ -35,14 +36,5 @@ class InvoiceRepository
             ->where('CodeCustomer', $customerCode)
             ->orderBy('Code', 'desc')
             ->paginate(12);
-    }
-
-    public function getBankAccount()
-    {
-
-        return $this->cacheQuery('bank_account', $this->cacheTime, function () {
-
-            return DB::table('AV_ShomareHesab_VIEW')->where('Def', 1)->where('CodeCompany', $this->active_company)->firstOrFail();
-        });
     }
 }

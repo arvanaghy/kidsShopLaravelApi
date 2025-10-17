@@ -42,13 +42,14 @@ class CheckoutService
             throw new Exception('Transaction not found: ' . $request->Authority);
         }
 
-        $thirdPartyResult = PaymentGatewayUtility::checkThirdPartyPayment($paymentResult);
+        $currencyUnit = $this->generalRepository->getCurrencyUnit();
+
+        $thirdPartyResult = PaymentGatewayUtility::checkThirdPartyPayment($paymentResult, $currencyUnit);
 
         if (isset($thirdPartyResult['data']['code']) && $thirdPartyResult['data']['code'] == 100) {
-            return DB::transaction(function () use ($paymentResult, $thirdPartyResult) {
+            return DB::transaction(function () use ($paymentResult, $thirdPartyResult, $currencyUnit) {
                 $customer = $this->customerRepository->findByCode($paymentResult->CCode);
-                $bankAccount = $this->invoiceRepository->getBankAccount();
-                $currencyUnit = $this->generalRepository->getCurrencyUnit();
+                $bankAccount = $this->generalRepository->getBankAccount();
 
                 $paymentResult->update(['UUID' => $thirdPartyResult['data']['ref_id']]);
 
