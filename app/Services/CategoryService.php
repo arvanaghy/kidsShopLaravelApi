@@ -28,44 +28,62 @@ class CategoryService
         $this->active_company = $companyService->getActiveCompany();
     }
 
+
+    protected function categoryImageMode($categories, $request)
+    {
+        if ($request->has('categoryImageMode')) {
+            if ($request->categoryImageMode == 'product_image') {
+                $this->setRandomProductImages($categories);
+            } else {
+                $this->processCategoryImages($categories);
+                $categories = $categories->map(function ($item) {
+                    unset($item->Pic);
+                    return $item;
+                });
+            }
+        }
+    }
+
     public function listCategories($request = null)
     {
 
         $queryParams = $request ? $request->query() : [];
-        $page = $request ? $request->query('page', 1) : 1;
 
-        $cacheKey = 'list_categories_' . md5(json_encode($queryParams) . '_page_' . $page);
+        $cacheKey = 'list_categories_' . md5(json_encode($queryParams));
 
-        return $this->cacheQuery($cacheKey, $this->ttl, function () use ($request) {
+        return $this->cacheQuery($cacheKey, 0, function () use ($request) {
             if ($search = $request?->query('search')) {
                 $search = StringHelper::normalizePersianCharacters($search);
             }
 
             $categories = $this->categoryRepository->listCategories($search);
 
-            $this->setRandomProductImages($categories);
-
-            // $categories->setCollection($categories->getCollection()->map(function ($item) {
-            //     unset($item->Pic);
-            //     return $item;
-            // }));
+            $this->categoryImageMode($categories, $request);
 
             return $categories;
         })->appends($request->query());
     }
 
-    public function listMenuCategories()
+
+    public function listMenuCategories($request = null)
     {
-        return $this->cacheQuery('menu_categories', $this->ttl, function () {
+        $cacheKey = 'menu_categories_' . md5(json_encode($request));
+
+        return $this->cacheQuery($cacheKey, 0, function () use ($request) {
 
             $categories = $this->categoryRepository->listMenuCategories();
 
-            $this->setRandomProductImages($categories);
-
-            // $categories = $categories->map(function ($item) {
-            //     unset($item->Pic);
-            //     return $item;
-            // });
+            if ($request->has('categoryImageMode')) {
+                if ($request->categoryImageMode == 'product_image') {
+                    $this->setRandomProductImages($categories);
+                } else {
+                    $this->processCategoryImages($categories);
+                    $categories = $categories->map(function ($item) {
+                        unset($item->Pic);
+                        return $item;
+                    });
+                }
+            }
 
             return $categories;
         });

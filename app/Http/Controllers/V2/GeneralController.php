@@ -7,7 +7,7 @@ use App\Services\CategoryService;
 use App\Services\GeneralService;
 use Carbon\Carbon;
 use Exception;
-
+use Illuminate\Http\Request;
 
 class GeneralController extends Controller
 {
@@ -26,10 +26,10 @@ class GeneralController extends Controller
     }
 
 
-    public function topMenu()
+    public function topMenu(Request $request)
     {
         try {
-            $categories = $this->categoryService->listMenuCategories();
+            $categories = $this->categoryService->listMenuCategories($request);
 
             return response()->json([
                 'result' => [

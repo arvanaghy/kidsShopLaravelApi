@@ -7,6 +7,7 @@ use App\Services\CategoryService;
 use App\Services\GeneralService;
 use App\Services\ProductService;
 use Exception;
+use Illuminate\Http\Request;
 
 class HomeController extends Controller
 {
@@ -23,12 +24,12 @@ class HomeController extends Controller
     }
 
 
-    public function homePage()
+    public function homePage(Request $request)
     {
         try {
             return response()->json([
                 'result' => [
-                    'categories' => $this->categoryService->listMenuCategories(),
+                    'categories' => $this->categoryService->listMenuCategories($request),
                     'banners' => $this->generalService->fetchBanners(),
                     'newestProducts' => $this->productService->homePageNewestProducts(),
                     'offeredProducts' => $this->productService->homePageOfferedProducts(),
