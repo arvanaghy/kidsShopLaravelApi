@@ -323,7 +323,7 @@ class ProductService
         }
 
         if (!$hasRequestFilter) {
-            $cacheKey = $cacheKeyPrefix . '_sdfsdall_' . $type;
+            $cacheKey = $cacheKeyPrefix . '_all_' . $type;
             return $this->cacheQuery($cacheKey, $this->ttl, function () use ($query) {
                 $query = $query
                     ->whereHas('productSizeColor', function ($subQuery) {
@@ -410,7 +410,7 @@ class ProductService
     public function listProductSizes($productResult = null, $hasRequestFilter = false, $type = 'all')
     {
         $productCodes = null;
-        $cacheKeyPrefix = 'product_sizes_' . $this->active_company;
+        $cacheKeyPrefix = 'kidsShopRedis_product_sizes_' . $this->active_company;
 
         switch ($type) {
             case 'bestseller':
@@ -426,7 +426,7 @@ class ProductService
         }
 
         if (!$hasRequestFilter) {
-            $cacheKey = $cacheKeyPrefix . '_fsdfall_' . $type;
+            $cacheKey = $cacheKeyPrefix . '_all_' . $type;
             return $this->cacheQuery($cacheKey, $this->ttl, function () use ($query) {
                 $query = $query->whereHas('productSizeColor', function ($subQuery) {
                     $subQuery->havingRaw('SUM(Mande) > 0');

@@ -296,7 +296,7 @@ class SubcategoryService
     public function listCategorySubCategoryProductSizes($Code = null, $type = 'category',  $productResult = null, $hasRequestFilter = false)
     {
         $productCodes = null;
-        $cacheKeyPrefix = 'product_sizes_' . $type . '_' . $Code . '_' .  $this->active_company;
+        $cacheKeyPrefix = 'kidsShopRedis_product_sizes_' . $type . '_' . $Code . '_' .  $this->active_company;
 
         switch ($type) {
             case 'subcategory':
