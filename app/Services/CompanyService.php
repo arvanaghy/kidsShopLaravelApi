@@ -19,14 +19,14 @@ class CompanyService
 
     public function getActiveCompany()
     {
-        return $this->cacheQuery('active_company', $this->ttl, function () {
+        return $this->cacheQuery('kidsShopRedis_active_company', $this->ttl, function () {
             return $this->companyRepository->getActiveCompanyCode();
         });
     }
 
     public function getFinancialPeriod($companyCode)
     {
-        return $this->cacheQuery('financial_period_' . $companyCode, $this->ttl, function () use ($companyCode) {
+        return $this->cacheQuery('kidsShopRedis_financial_period_' . $companyCode, $this->ttl, function () use ($companyCode) {
             return $this->companyRepository->getFinancialPeriodCode($companyCode);
         });
     }

@@ -157,7 +157,7 @@ class ProductService
      */
     public function relatedProducts($GCode, $SCode, $excludeCode = null)
     {
-        $cacheKey = "related_products_{$GCode}_{$SCode}_" . ($excludeCode ?? 'no_exclude');
+        $cacheKey = "kidsShopRedis_related_products_{$GCode}_{$SCode}_" . ($excludeCode ?? 'no_exclude');
         return $this->cacheQuery($cacheKey, $this->ttl, function () use ($GCode, $SCode, $excludeCode) {
             $baseQuery = $this->baseProductQuery()
                 ->where('GCode', $GCode)
@@ -186,7 +186,7 @@ class ProductService
     public function suggestedProducts($excludeCode = null)
     {
 
-        $cacheKey = "suggested_products_" . ($excludeCode ?? 'no_exclude');
+        $cacheKey = "kidsShopRedis_suggested_products_" . ($excludeCode ?? 'no_exclude');
         return $this->cacheQuery($cacheKey, $this->ttl, function () use ($excludeCode) {
 
             $baseQuery = $this->baseProductQuery()
@@ -218,7 +218,7 @@ class ProductService
     public function homePageNewestProducts()
     {
 
-        return $this->cacheQuery('home_page_newest_products', $this->ttl, function () {
+        return $this->cacheQuery('kidsShopRedis_home_page_newest_products', $this->ttl, function () {
             $baseQuery = $this->baseProductQuery()
                 ->orderBy('Code', 'DESC')
                 ->limit(8);
@@ -241,7 +241,7 @@ class ProductService
      */
     public function homePageOfferedProducts()
     {
-        return $this->cacheQuery('home_page_offered_products', $this->ttl, function () {
+        return $this->cacheQuery('kidsShopRedis_home_page_offered_products', $this->ttl, function () {
             $baseQuery = $this->baseProductQuery()
                 ->where('CFestival', 1)
                 ->orderBy('Code', 'ASC')
@@ -261,7 +261,7 @@ class ProductService
 
     public function homePageBestSellingProducts()
     {
-        return $this->cacheQuery('home_page_best_selling_products', $this->ttl, function () {
+        return $this->cacheQuery('kidsShopRedis_home_page_best_selling_products', $this->ttl, function () {
 
             $baseQuery = BestSellModel::with(['productSizeColor'])
                 ->where('CodeDoreMali', $this->financial_period)
@@ -307,7 +307,7 @@ class ProductService
     public function listProductColors($productResult = null, $hasRequestFilter = false, $type = 'all')
     {
         $productCodes = null;
-        $cacheKeyPrefix = 'product_colors_' . $this->active_company;
+        $cacheKeyPrefix = 'kidsShopRedis_product_colors_' . $this->active_company;
 
         switch ($type) {
             case 'bestseller':
@@ -542,7 +542,7 @@ class ProductService
     {
         $queryParams = $request ? $request->query() : [];
         $page = $request ? $request->query('product_page', 1) : 1;
-        $cacheKey = 'list_best_selling_' . md5(json_encode($queryParams) . '_page_' . $page);
+        $cacheKey = 'kidsShopRedis_list_best_selling_' . md5(json_encode($queryParams) . '_page_' . $page);
 
         $results = $this->cacheQuery($cacheKey, $this->ttl, function () use ($request) {
             $baseQuery = BestSellModel::with(['productSizeColor'])
@@ -596,7 +596,7 @@ class ProductService
     {
         $queryParams = $request ? $request->query() : [];
         $page = $request ? $request->query('product_page', 1) : 1;
-        $cacheKey = 'list_all_products_' . md5(json_encode($queryParams) . '_page_' . $page);
+        $cacheKey = 'kidsShopRedis_list_all_products_' . md5(json_encode($queryParams) . '_page_' . $page);
 
         $results = $this->cacheQuery($cacheKey, $this->ttl, function () use ($request) {
             $baseQuery = $this->baseProductQuery();
@@ -626,7 +626,7 @@ class ProductService
     {
         $queryParams = $request ? $request->query() : [];
         $page = $request ? $request->query('product_page', 1) : 1;
-        $cacheKey = 'list_offered_products_' . md5(json_encode($queryParams) . '_page_' . $page);
+        $cacheKey = 'kidsShopRedis_list_offered_products_' . md5(json_encode($queryParams) . '_page_' . $page);
 
         $results = $this->cacheQuery($cacheKey, $this->ttl, function () use ($request) {
             $baseQuery = $this->baseProductQuery();

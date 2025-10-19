@@ -49,7 +49,7 @@ class CategoryService
 
         $queryParams = $request ? $request->query() : [];
 
-        $cacheKey = 'list_categories_' . md5(json_encode($queryParams));
+        $cacheKey = 'kidsShopRedis_list_categories_' . md5(json_encode($queryParams));
 
         return $this->cacheQuery($cacheKey, 0, function () use ($request) {
             if ($search = $request?->query('search')) {
@@ -67,7 +67,7 @@ class CategoryService
 
     public function listMenuCategories($request = null)
     {
-        $cacheKey = 'menu_categories_' . md5(json_encode($request));
+        $cacheKey = 'kidsShopRedis_menu_categories_' . md5(json_encode($request));
 
         return $this->cacheQuery($cacheKey, 0, function () use ($request) {
 
@@ -84,7 +84,6 @@ class CategoryService
                     });
                 }
             }
-
             return $categories;
         });
     }
@@ -112,7 +111,7 @@ class CategoryService
 
     protected function getProductsByCategory($gCode)
     {
-        $cacheKey = "products_by_category_{$gCode}";
+        $cacheKey = "kidsShopRedis_products_by_category_{$gCode}";
         return $this->cacheQuery($cacheKey, $this->ttl, function () use ($gCode) {
             return ProductModel::with(['productSizeColor'])
                 ->where('CodeCompany', $this->active_company)

@@ -27,7 +27,7 @@ class GeneralService
 
     public function getCompanyInfo()
     {
-        return $this->cacheQuery('company_info', $this->cacheTime, function () {
+        return $this->cacheQuery('kidsShopRedis_company_info', $this->cacheTime, function () {
             return DB::table('Company')->where('DeviceSelected', 1)->first();
         });
     }
@@ -39,7 +39,7 @@ class GeneralService
 
     public function fetchBanners()
     {
-        return $this->cacheQuery('home_page_banners', $this->cacheTime, function () {
+        return $this->cacheQuery('kidsShopRedis_home_page_banners', $this->cacheTime, function () {
             $baseQuery = DeviceHeaderImage::where('CodeCompany', $this->active_company)
                 ->orderBy('Code', 'DESC')
                 ->limit(6);
@@ -82,7 +82,7 @@ class GeneralService
 
     public function listTransferServices()
     {
-        return $this->cacheQuery('transfer_services', $this->cacheTime, function () {
+        return $this->cacheQuery('kidsShopRedis_transfer_services', 0, function () {
             return DB::table('AV_KhadamatDevice_View')->where('CodeCompany', $this->active_company)->get();
         });
     }
@@ -90,21 +90,21 @@ class GeneralService
 
     public function checkOnlinePaymentAvailable()
     {
-        return $this->cacheQuery('online_payment_available', $this->cacheTime, function () {
+        return $this->cacheQuery('kidsShopRedis_online_payment_available', $this->cacheTime, function () {
             return $this->generalRepository->getBankAccount();
         });
     }
 
     public function aboutUs()
     {
-        return $this->cacheQuery('about_us', $this->cacheTime, function () {
+        return $this->cacheQuery('kidsShopRedis_about_us', $this->cacheTime, function () {
             return DB::table('DeviceAbout')->where('Type', 0)->orderBy('Radif', 'asc')->get();
         });
     }
 
     public function faq()
     {
-        return $this->cacheQuery('faq', $this->cacheTime, function () {
+        return $this->cacheQuery('kidsShopRedis_faq', $this->cacheTime, function () {
             return DB::table('DeviceAbout')->where('Type', 1)->orderBy('Radif', 'asc')->get();
         });
     }

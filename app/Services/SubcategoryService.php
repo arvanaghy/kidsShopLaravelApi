@@ -194,7 +194,7 @@ class SubcategoryService
     public function listCategorySubCategoryProductColors($Code = null, $type = 'category',  $productResult = null, $hasRequestFilter = false)
     {
         $productCodes = null;
-        $cacheKeyPrefix = 'product_colors_' . $type . '_' . $Code . '_' . $this->active_company;
+        $cacheKeyPrefix = 'kidsShopRedis_product_colors_' . $type . '_' . $Code . '_' . $this->active_company;
 
         switch ($type) {
             case 'subcategory':
@@ -390,7 +390,7 @@ class SubcategoryService
 
     protected function getProductsBySubcategory($sCode)
     {
-        $cacheKey = "products_by_subcategory_{$sCode}";
+        $cacheKey = "kidsShopRedis_products_by_subcategory_{$sCode}";
         $products = $this->cacheQuery($cacheKey, $this->ttl, function () use ($sCode) {
             $query = ProductModel::with(['productSizeColor'])
                 ->where('CodeCompany', $this->active_company)
@@ -449,7 +449,7 @@ class SubcategoryService
 
         $queryParams = $request ? $request->query() : [];
         $page = $request ? $request->query('subcategory_page', 1) : 1;
-        $cacheKey = 'list_category_subcategories_' . $Code . '_' . md5(json_encode($queryParams) . '_page_' . $page);
+        $cacheKey = 'kidsShopRedis_list_category_subcategories_' . $Code . '_' . md5(json_encode($queryParams) . '_page_' . $page);
 
         $results = $this->cacheQuery($cacheKey, $this->ttl, function () use ($Code) {
             $subcategories = SubCategoryModel::select('Code', 'Name', 'PicName')->where('CodeCompany', $this->active_company)
@@ -477,7 +477,7 @@ class SubcategoryService
 
     public function fetchCategory($Code)
     {
-        $cache_key = 'category_' . md5($Code . '_' . $this->active_company);
+        $cache_key = 'kidsShopRedis_category_' . md5($Code . '_' . $this->active_company);
         return $this->cacheQuery($cache_key, $this->ttl, function () use ($Code) {
 
             $result = SubCategoryModel::where('CodeCompany', $this->active_company)->where('CodeGroup', $Code)->first();
@@ -493,7 +493,7 @@ class SubcategoryService
     public function fetchSubCategory($Code)
     {
 
-        $cahce_key = 'subcategory_' . md5($Code . '_' . $this->active_company);
+        $cahce_key = 'kidsShopRedis_subcategory_' . md5($Code . '_' . $this->active_company);
 
         return $this->cacheQuery($cahce_key, $this->ttl, function () use ($Code) {
 
@@ -514,7 +514,7 @@ class SubcategoryService
         $queryParams = $request ? $request->query() : [];
         $productPage = $request ? $request->query('product_page', 1) : 1;
         $subcategoryPage = $request ? $request->query('subcategory_page', 1) : 1;
-        $cacheKey = 'list_category_products_' . md5(json_encode($queryParams) . '_category_' . $categoryCode . '_product_page_' . $productPage . '_subcategory_page_' . $subcategoryPage);
+        $cacheKey = 'kidsShopRedis_list_category_products_' . md5(json_encode($queryParams) . '_category_' . $categoryCode . '_product_page_' . $productPage . '_subcategory_page_' . $subcategoryPage);
 
         $results = $this->cacheQuery($cacheKey, $this->ttl, function () use ($request, $categoryCode) {
             $baseQuery = $this->baseProductQuery();
@@ -547,7 +547,7 @@ class SubcategoryService
 
         $queryParams = $request ? $request->query() : [];
         $productPage = $request ? $request->query('product_page', 1) : 1;
-        $cacheKey = 'list_subcategory_products_' . md5(json_encode($queryParams) . '_subcategory_' . $subcategoryCode . '_product_page_' . $productPage);
+        $cacheKey = 'kidsShopRedis_list_subcategory_products_' . md5(json_encode($queryParams) . '_subcategory_' . $subcategoryCode . '_product_page_' . $productPage);
 
         $results = $this->cacheQuery($cacheKey, $this->ttl, function () use ($request, $subcategoryCode) {
             $baseQuery = $this->baseProductQuery();
