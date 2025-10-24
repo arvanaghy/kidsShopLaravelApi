@@ -32,6 +32,7 @@ class OrderRepository
         return DB::table('AV_SOrder_View')
             ->where('CodeDoreMali', $financialPeriod)
             ->where('CCode', $customerCode)
+            ->where('CSync', 0)
             ->orderBy('Code', 'desc')
             ->paginate(12);
     }

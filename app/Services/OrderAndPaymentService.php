@@ -74,6 +74,7 @@ class OrderAndPaymentService
                 'CodeKhadamat' => $orderData['CodeKhadamat'],
                 'MKhadamat' => $transfer->Mablag ?? 0,
                 'status' => 'سفارش ثبت شده و در انتظار پرداخت می باشد',
+                'Comment' => $orderData['description'] ?? ''
             ]);
             return OrderModel::where('CCode', $user->Code)->orderBy('Code', 'desc')->first()->Code;
         } catch (Exception $e) {

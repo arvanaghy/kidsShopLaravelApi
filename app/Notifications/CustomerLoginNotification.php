@@ -28,7 +28,7 @@ class CustomerLoginNotification extends Notification
      */
     public function via(object $notifiable): array
     {
-        return [\App\Channels\SmsChannel::class];
+        return [\App\Channels\SmsChannel::class ];
     }
 
     public function toSms(object $notifiable)
