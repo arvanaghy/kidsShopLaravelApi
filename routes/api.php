@@ -38,9 +38,7 @@ Route::prefix('develop')->group(function () {
     // Route::get('/test-redis', [DevelopController::class, 'testRedis']);
     // Route::get('/test-order', [DevelopController::class, 'testOrder']);
     // Route::get('/sms-result', [DevelopController::class, 'smsResult']);
-     Route::get('/send-email', [DevelopController::class, 'sendEmail']);
-
-
+    Route::get('/send-email', [DevelopController::class, 'sendEmail']);
 });
 
 Route::prefix('general')->group(function () {
@@ -131,5 +129,17 @@ Route::prefix('v2')->group(function () {
 
     Route::middleware('customerConfirm')->group(function () {
         Route::post('/process-order-and-payment', [WebOrderAndPaymentController::class, 'processOrderAndPayment']);
+    });
+
+    Route::middleware('adminConfirm')->group(function () {
+        Route::prefix('products')->group(function () {
+            Route::post('/upload-product-images/{Code}', [WebProductController::class, 'uploadProductImages']);
+            Route::post('/update-product-comment/{Code}', [WebProductController::class, 'updateProductComment']);
+            Route::delete('/delete-product-images/{Code}', [WebProductController::class, 'deleteProductImages']);
+        });
+        Route::prefix('orders')->group(function () {
+            Route::get('/', [WebOrderAndPaymentController::class, 'listAllOrders']);
+            Route::get('/{id}', [WebOrderAndPaymentController::class, 'showOrder']);
+        });
     });
 });

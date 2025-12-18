@@ -123,4 +123,57 @@ class ProductController extends Controller
             ], 500);
         }
     }
+
+
+    public function uploadProductImages(Request $request, $code)
+    {
+        try {
+            $this->productService->insertProductImages($request, $code);
+
+            return response()->json([
+                'status' => true,
+                'message' => 'تصاویر با موفقیت بارگذاری شدند'
+            ], 200);
+        } catch (Exception $e) {
+            return response()->json([
+                'status' => false,
+                'message' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+
+    public function deleteProductImages($code)
+    {
+        try {
+            $this->productService->deleteProductImages($code);
+            return response()->json([
+                'status' => true,
+                'message' => 'تصاویر با موفقیت حذف شدند'
+            ], 200);
+        } catch (Exception $e) {
+            return response()->json([
+                'status' => false,
+                'message' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+
+    public function updateProductComment(Request $request, $code)
+    {
+        try {
+            $this->productService->insertProductComment($request, $code);
+
+            return response()->json([
+                'status' => true,
+                'message' => 'توضیحات با موفقیت به‌روزرسانی شد'
+            ], 200);
+        } catch (Exception $e) {
+            return response()->json([
+                'status' => false,
+                'message' => $e->getMessage()
+            ], 500);
+        }
+    }
 }

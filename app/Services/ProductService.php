@@ -8,6 +8,7 @@ use App\Models\ProductModel;
 use App\Repositories\ImageUpdater;
 use App\Services\ImageServices\ProductImageService;
 use App\Traits\Cacheable;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 class ProductService
@@ -122,9 +123,9 @@ class ProductService
             ])
             ->first();
 
-            if (!$product) {
-                return null;
-            }
+        if (!$product) {
+            return null;
+        }
 
         if ($product->CChangePic == 1) {
             $updates = [];
@@ -649,5 +650,39 @@ class ProductService
             ->appends($request->query());
 
         return $results;
+    }
+
+    public function insertProductImages($images, $productCode)
+    {
+
+        DB::table('KalaImage')->insert([
+            'CodeKala' => $productCode,
+            'PicName' => 'https://api.kidsshop110.ir/products-image/webp/18/78/rTKbi1buVv7ucsmT.webp',
+            'Pic' => null,
+            'Def' => 0
+        ]);
+        // if (empty($images)) {
+        //     return;
+        // }
+        // foreach ($images as $image) {
+        //     $picName = Str::random(16);
+
+        //     // $this->productImageService->processProductImage($product, $image, $picName);
+        // }
+    }
+
+
+    public function deleteProductImages($productCode)
+    {
+        // DB::table('KalaImage')->where('CodeKala', $productCode)->delete();
+    }
+
+    public function insertProductComment($request, $productCode)
+    {
+        $comment = $request->input('comment');
+
+        DB::table('Kala')->where('Code', $productCode)->update([
+            'Comment' => $comment
+        ]);
     }
 }
