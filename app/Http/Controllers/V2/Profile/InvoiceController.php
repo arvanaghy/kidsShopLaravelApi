@@ -119,4 +119,37 @@ class InvoiceController extends Controller
             ], 503);
         }
     }
+
+
+    public function listAllOrders()
+    {
+        try {
+            $orders = $this->invoiceService->listAllOrders();
+            return response()->json([
+                "message" => "با موفقیت انجام شد",
+                "result" => $orders
+            ], 200);
+        } catch (Exception $e) {
+            return response()->json([
+                "message" => $e->getMessage(),
+                "result" => null
+            ], 503);
+        }
+    }
+
+    public function showOrder($id)
+    {
+        try {
+            $order = $this->invoiceService->showOrder($id);
+            return response()->json([
+                "message" => "با موفقیت انجام شد",
+                "result" => $order
+            ], 200);
+        } catch (Exception $e) {
+            return response()->json([
+                "message" => $e->getMessage(),
+                "result" => null
+            ], 503);
+        }
+    }
 }

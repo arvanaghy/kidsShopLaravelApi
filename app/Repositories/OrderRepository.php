@@ -44,4 +44,21 @@ class OrderRepository
             ->where('CCode', $customerCode)
             ->paginate(12);
     }
+
+    public function listAllOrders($financialPeriod, $companyCode)
+    {
+        return DB::table('AV_RFactorForoosh_VIEW')
+            ->where('CodeDoreMali', $financialPeriod)
+            ->where('CodeCompany', $companyCode)
+            ->orderBy('Code', 'desc')
+            ->paginate(12);
+    }
+
+    public function showOrder($financialPeriod, $id)
+    {
+        return DB::table('AV_SOrderKala_View')
+            ->where('CodeDoreMali', $financialPeriod)
+            ->where('Code', $id)
+            ->get();
+    }
 }

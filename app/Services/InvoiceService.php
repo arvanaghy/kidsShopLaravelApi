@@ -86,4 +86,14 @@ class InvoiceService
         $this->execProcedure($customer->Code);
         return $this->orderRepository->listUnverifiedOrdersProducts($order, $customer->Code);
     }
+
+
+    public function listAllOrders()
+    {
+        return $this->orderRepository->listAllOrders($this->financial_period, $this->active_company);
+    }
+    public function showOrder($id)
+    {
+        return $this->orderRepository->showOrder($this->financial_period, $id);
+    }
 }

@@ -138,8 +138,8 @@ Route::prefix('v2')->group(function () {
             Route::delete('/delete-product-images/{Code}', [WebProductController::class, 'deleteProductImages']);
         });
         Route::prefix('orders')->group(function () {
-            Route::get('/', [WebOrderAndPaymentController::class, 'listAllOrders']);
-            Route::get('/{id}', [WebOrderAndPaymentController::class, 'showOrder']);
+            Route::get('/', [WebInvoiceController::class, 'listAllOrders']);
+            Route::get('/{id}', [WebInvoiceController::class, 'showOrder']);
         });
     });
 });
