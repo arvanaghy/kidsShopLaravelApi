@@ -16,7 +16,7 @@ class CompanyRepository
     public function getFinancialPeriodCode(string $companyCode): ?string
     {
         return DB::table('DoreMali')
-            ->where('CodeCompany', 1)
+            ->where('CodeCompany', $companyCode)
             ->where('DeviceSelected', 1)
             ->value('Code');
     }
