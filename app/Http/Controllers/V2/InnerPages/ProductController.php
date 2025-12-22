@@ -143,10 +143,10 @@ class ProductController extends Controller
     }
 
 
-    public function deleteProductImages($code)
+    public function deleteProductImage($code)
     {
         try {
-            $this->productService->deleteProductImages($code);
+            $this->productService->deleteProductImage($code);
             return response()->json([
                 'status' => true,
                 'message' => 'تصاویر با موفقیت حذف شدند'

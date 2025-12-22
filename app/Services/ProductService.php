@@ -672,9 +672,14 @@ class ProductService
     }
 
 
-    public function deleteProductImages($productCode)
+    public function deleteProductImage($imageCode)
     {
-        // DB::table('KalaImage')->where('CodeKala', $productCode)->delete();
+        $image = DB::table('KalaImage')->where('Code', $imageCode)->first();
+        if (!$image) {
+            throw new \Exception('تصویر مورد نظر یافت نشد');
+        }
+
+        DB::table('KalaImage')->where('Code', $imageCode)->delete();
     }
 
     public function insertProductComment($request, $productCode)

@@ -135,7 +135,7 @@ Route::prefix('v2')->group(function () {
         Route::prefix('products')->group(function () {
             Route::post('/upload-product-images/{Code}', [WebProductController::class, 'uploadProductImages']);
             Route::post('/update-product-comment/{Code}', [WebProductController::class, 'updateProductComment']);
-            Route::delete('/delete-product-images/{Code}', [WebProductController::class, 'deleteProductImages']);
+            Route::delete('/delete-product-image/{Code}', [WebProductController::class, 'deleteProductImage']);
         });
         Route::prefix('orders')->group(function () {
             Route::get('/', [WebInvoiceController::class, 'listAllOrders']);
