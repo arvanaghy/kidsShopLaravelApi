@@ -149,7 +149,7 @@ class SubcategoryService
                 'Vahed',
                 'SPrice',
                 'PicName',
-                'Pic',
+                // 'Pic',
                 'ImageCode',
                 'created_at'
             ]);
@@ -525,7 +525,7 @@ class SubcategoryService
 
             $results = $baseQuery->paginate(24, ['*'], 'product_page');
 
-            $this->processProductListImageCreation($results->items());
+            // $this->processProductListImageCreation($results->items());
 
             $results->setCollection($results->getCollection()->map(function ($item) {
                 unset($item->Pic);
@@ -558,7 +558,7 @@ class SubcategoryService
 
             $results = $baseQuery->paginate(24, ['*'], 'product_page');
 
-            $this->processProductListImageCreation($results->items());
+            // $this->processProductListImageCreation($results->items());
 
             $results->setCollection($results->getCollection()->map(function ($item) {
                 unset($item->Pic);

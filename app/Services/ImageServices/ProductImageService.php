@@ -49,6 +49,22 @@ class ProductImageService
             }
         }
     }
+    protected function createProductImagePathMaker($product_code): void
+    {
+        $paths = [
+            public_path('web-products-image'),
+            public_path('web-products-image/original'),
+            public_path('web-products-image/webp'),
+            public_path('web-products-image/original/' . $product_code),
+            public_path('web-products-image/webp/' . $product_code),
+        ];
+
+        foreach ($paths as $path) {
+            if (!File::isDirectory($path)) {
+                File::makeDirectory($path, 0755, true);
+            }
+        }
+    }
 
     /**
      * Process and save product image as WebP.
@@ -70,6 +86,48 @@ class ProductImageService
             quality: 100,
         );
     }
+    public function processProductImageMaker($product_code, $image, string $pic_name): bool
+    {
+        $imagePath = public_path("web-products-image/original/{$product_code}/{$pic_name}.jpg");
+        $webpPath = public_path("web-products-image/webp/{$product_code}/{$pic_name}.webp");
+
+        $this->createProductImagePathMaker($product_code);
+
+        return $this->imageService->processImage(
+            data: $image,
+            imagePath: $imagePath,
+            outputPath: $webpPath,
+            resize: [1200, 1200],
+            quality: 100,
+        );
+    }
+
+    public function processWebProductImageMaker($product_code, $imageData, string $pic_name): bool
+    {
+        $imagePath = public_path("web-products-image/original/{$product_code}/{$pic_name}.jpg");
+        $webpPath = public_path("web-products-image/webp/{$product_code}/{$pic_name}.webp");
+
+        $this->createProductImagePathMaker($product_code);
+
+        if (is_string($imageData) && base64_decode($imageData, true) !== false) {
+            return $this->imageService->processWebImage(
+                imageFile: $imageData,
+                imagePath: $imagePath,
+                outputPath: $webpPath,
+                resize: [1200, 1200],
+                quality: 100,
+            );
+        } else {
+            return $this->imageService->processImageFromResource(
+                imageResource: $imageData,
+                imagePath: $imagePath,
+                outputPath: $webpPath,
+                resize: [1200, 1200],
+                quality: 100,
+            );
+        }
+    }
+
 
     /**
      * Remove unused images from storage.
@@ -90,6 +148,19 @@ class ProductImageService
             }
         } catch (Exception $e) {
             Log::warning("Failed to cleanup images: {$e->getMessage()}");
+        }
+    }
+
+
+
+    public function deleteProductImage($productCode, $pic_name)
+    {
+        $path = env('APP_URL', 'https://api.kidsshop110.ir') . '/web-products-image/webp/' . $productCode . '/';
+        $purePicName = str_replace($path, '', $pic_name);
+
+        $imagePath = public_path('web-products-image/webp/' . $productCode . '/' . $purePicName);
+        if (File::exists($imagePath)) {
+            return File::delete($imagePath);
         }
     }
 }

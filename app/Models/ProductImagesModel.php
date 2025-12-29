@@ -13,6 +13,8 @@ class ProductImagesModel extends Model
 
     public $timestamps = false;
 
+    protected $primaryKey = 'Code';
+
     protected $fillable = [
         'CodeKala',
         'PicName',

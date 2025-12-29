@@ -125,10 +125,10 @@ class ProductController extends Controller
     }
 
 
-    public function uploadProductImages(Request $request, $code)
+    public function uploadProductImages(Request $request, $productCode)
     {
         try {
-            $this->productService->insertProductImages($request, $code);
+            $this->productService->insertProductImages($request, $productCode);
 
             return response()->json([
                 'status' => true,
@@ -143,13 +143,47 @@ class ProductController extends Controller
     }
 
 
-    public function deleteProductImage($code)
+    public function deleteProductImage($productCode, $imageCode)
     {
         try {
-            $this->productService->deleteProductImage($code);
+            $this->productService->deleteProductImage($productCode, $imageCode);
+            return response()->json([
+                'message' => 'تصویر با موفقیت حذف شد'
+            ], 200);
+        } catch (Exception $e) {
+            return response()->json([
+                'message' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+
+    public function updateProductComment(Request $request, $productCode)
+    {
+        try {
+            $this->productService->insertProductComment($request, $productCode);
+
             return response()->json([
                 'status' => true,
-                'message' => 'تصاویر با موفقیت حذف شدند'
+                'message' => 'توضیحات با موفقیت به‌روزرسانی شد'
+            ], 200);
+        } catch (Exception $e) {
+            return response()->json([
+                'status' => false,
+                'message' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function letsCreateProductImages(Request $request)
+    {
+        try {
+            // $productCodes = $this->productService->letsCreateProductImages($request);
+
+            return response()->json([
+                // 'product_codes' => $productCodes,
+                'status' => true,
+                'message' => 'لیست کدهای محصولات با تصاویر با موفقیت بازیابی شد'
             ], 200);
         } catch (Exception $e) {
             return response()->json([
@@ -160,18 +194,15 @@ class ProductController extends Controller
     }
 
 
-    public function updateProductComment(Request $request, $code)
+    public function makeProductImageMain($productCode, $imageCode)
     {
         try {
-            $this->productService->insertProductComment($request, $code);
-
+            $this->productService->makeProductImageMain($productCode, $imageCode);
             return response()->json([
-                'status' => true,
-                'message' => 'توضیحات با موفقیت به‌روزرسانی شد'
+                'message' => 'تصویر اصلی با موفقیت تغییر کرد'
             ], 200);
         } catch (Exception $e) {
             return response()->json([
-                'status' => false,
                 'message' => $e->getMessage()
             ], 500);
         }

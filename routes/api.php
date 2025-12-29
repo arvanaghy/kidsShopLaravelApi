@@ -18,8 +18,7 @@ use App\Http\Controllers\V2\OrderAndPaymentController as WebOrderAndPaymentContr
 use App\Http\Controllers\V2\InnerPages\CheckOutController as WebCheckOutController;
 
 use App\Http\Controllers\V2\Profile\InvoiceController as WebInvoiceController;
-
-
+use Illuminate\Support\Facades\DB;
 
 /*
 |--------------------------------------------------------------------------
@@ -39,6 +38,7 @@ Route::prefix('develop')->group(function () {
     // Route::get('/test-order', [DevelopController::class, 'testOrder']);
     // Route::get('/sms-result', [DevelopController::class, 'smsResult']);
     Route::get('/send-email', [DevelopController::class, 'sendEmail']);
+    Route::get('/lets-create-product-images', [WebProductController::class, 'letsCreateProductImages']);
 });
 
 Route::prefix('general')->group(function () {
@@ -133,9 +133,10 @@ Route::prefix('v2')->group(function () {
 
     Route::middleware('adminConfirm')->group(function () {
         Route::prefix('products')->group(function () {
-            Route::post('/upload-product-images/{Code}', [WebProductController::class, 'uploadProductImages']);
-            Route::post('/update-product-comment/{Code}', [WebProductController::class, 'updateProductComment']);
-            Route::delete('/delete-product-image/{Code}', [WebProductController::class, 'deleteProductImage']);
+            Route::post('/{productCode}/upload-product-images', [WebProductController::class, 'uploadProductImages']);
+            Route::post('/{productCode}/update-product-comment', [WebProductController::class, 'updateProductComment']);
+            Route::delete('/{productCode}/delete-product-image/{imageCode}', [WebProductController::class, 'deleteProductImage']);
+            Route::get('/{productCode}/make-product-image-main/{imageCode}', [WebProductController::class, 'makeProductImageMain']);
         });
         Route::prefix('orders')->group(function () {
             Route::get('/', [WebInvoiceController::class, 'listAllOrders']);

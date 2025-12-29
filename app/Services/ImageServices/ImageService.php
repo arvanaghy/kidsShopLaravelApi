@@ -55,4 +55,56 @@ class ImageService
             File::delete($path);
         }
     }
+
+    public function processImageFromResource($imageResource, string $imagePath, string $outputPath, array $resize = [1200, 1600], int $quality = 100): bool
+    {
+        try {
+            if (empty($imageResource)) {
+                return false;
+            }
+
+            File::put($imagePath, $imageResource);
+
+            Image::configure(['driver' => 'gd']);
+            Image::make($imagePath)
+                ->resize($resize[0], $resize[1], function ($constraint) {
+                    $constraint->aspectRatio();
+                    $constraint->upsize();
+                })
+                ->encode('webp', $quality)
+                ->save($outputPath);
+
+            File::delete($imagePath);
+            return true;
+        } catch (\Exception $e) {
+            Log::error("Failed to process image from resource: {$e->getMessage()}");
+            return false;
+        }
+    }
+
+
+    public function processWebImage($imageFile, string $imagePath, string $outputPath, array $resize = [1200, 1600], int $quality = 100): bool
+    {
+        try {
+            if (empty($imageFile)) {
+                return false;
+            }
+            File::put($imagePath, $imageFile);
+
+            Image::configure(['driver' => 'gd']);
+            Image::make($imagePath)
+                ->resize($resize[0], $resize[1], function ($constraint) {
+                    $constraint->aspectRatio();
+                    $constraint->upsize();
+                })
+                ->encode('webp', $quality)
+                ->save($outputPath);
+
+            File::delete($imagePath);
+            return true;
+        } catch (\Exception $e) {
+            Log::error("Failed to process image: {$e->getMessage()}");
+            return false;
+        }
+    }
 }
