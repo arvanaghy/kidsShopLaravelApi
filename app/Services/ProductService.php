@@ -43,14 +43,13 @@ class ProductService
      */
     protected function baseProductQuery(): \Illuminate\Database\Eloquent\Builder
     {
-        return ProductModel::with(['productSizeColor'])
+        return ProductModel::with(['productSizeColor', 'productImages' => fn($query) => $query->select('Code', 'PicName', 'Def', 'CodeKala')])
             ->where('CodeCompany', $this->active_company)
             ->whereHas('productSizeColor', function ($query) {
                 $query->havingRaw('SUM(Mande) > 0');
             })
             ->where('CShowInDevice', 1)
             ->select([
-                // 'CChangePic',
                 'GCode',
                 'GName',
                 'SCode',
@@ -60,8 +59,6 @@ class ProductService
                 'Name',
                 'Vahed',
                 'SPrice',
-                // 'PicName',
-                // 'ImageCode',
                 'created_at'
             ]);
     }
@@ -108,7 +105,6 @@ class ProductService
                 $query->havingRaw('SUM(Mande) > 0');
             })
             ->select([
-                // 'CChangePic',
                 'GCode',
                 'GName',
                 'Comment',
@@ -119,7 +115,6 @@ class ProductService
                 'Name',
                 'Vahed',
                 'SPrice',
-                // 'PicName',
                 'created_at'
             ])
             ->first();
@@ -128,35 +123,11 @@ class ProductService
             return null;
         }
 
-        // if ($product->CChangePic == 1) {
-        //     $updates = [];
-        //     foreach ($product->productImages as $image) {
-        //         if ($image->Pic && $image->PicName == null) {
-        //             $picName = Str::random(16);
-        //             if ($this->productImageService->processProductImage($product, $image, $picName)) {
-        //                 $updates[] = ['Code' => $image->Code, 'PicName' => $picName];
-        //             }
-        //         }
-        //     }
-
-        //     if (!empty($updates)) {
-        //         $this->imageUpdater->productImagesUpdate($updates);
-        //         $product->update(['CChangePic' => 0]);
-        //     }
-        // }
-
-        // if ($product->productImages) {
-        //     $product->productImages->each(function ($image) {
-        //         unset($image->Pic);
-        //     });
-        // }
 
         return $product;
     }
 
-    /**
-     * Get related products, excluding the specified product code.
-     */
+
     public function relatedProducts($GCode, $SCode, $excludeCode = null)
     {
         $cacheKey = "kidsShopRedis_related_products_{$GCode}_{$SCode}_" . ($excludeCode ?? 'no_exclude');
@@ -170,21 +141,10 @@ class ProductService
                 ->limit(16);
 
             $results = $baseQuery->get();
-
-            // $this->processProductListImageCreation($results);
-
-            // $results = $results->map(function ($item) {
-            //     unset($item->Pic);
-            //     return $item;
-            // });
-
             return $results;
         });
     }
 
-    /**
-     * Get offered (festival) products.
-     */
     public function suggestedProducts($excludeCode = null)
     {
 
@@ -200,23 +160,10 @@ class ProductService
 
             $results = $baseQuery->get();
 
-            // $this->processProductListImageCreation($results);
-
-            // $results = $results->map(function ($item) {
-            //     unset($item->Pic);
-            //     return $item;
-            // });
-
             return $results;
         });
     }
 
-    /**
-     * Get newest products, excluding products with zero Mande.
-     * Products are ordered by Code in ascending order and limited to 8 records.
-     *
-     * @return \Illuminate\Database\Eloquent\Collection
-     */
     public function homePageNewestProducts()
     {
 
@@ -226,21 +173,9 @@ class ProductService
                 ->limit(8);
 
             $results = $baseQuery->get();
-
-            // $this->processProductListImageCreation($results);
-            return $results->map(function ($item) {
-                unset($item->Pic);
-                return $item;
-            });
         });
     }
 
-    /**
-     * Get offered products, excluding products with zero Mande.
-     * Products are ordered by Code in ascending order and limited to 8 records.
-     *
-     * @return \Illuminate\Database\Eloquent\Collection
-     */
     public function homePageOfferedProducts()
     {
         return $this->cacheQuery('kidsShopRedis_home_page_offered_products', $this->ttl, function () {
@@ -251,12 +186,6 @@ class ProductService
 
             $results = $baseQuery->get();
 
-            // $this->processProductListImageCreation($results);
-            $results = $results->map(function ($item) {
-                unset($item->Pic);
-                return $item;
-            });
-
             return $results;
         });
     }
@@ -265,7 +194,7 @@ class ProductService
     {
         return $this->cacheQuery('kidsShopRedis_home_page_best_selling_products', $this->ttl, function () {
 
-            $baseQuery = BestSellModel::with(['productSizeColor'])
+            $baseQuery = BestSellModel::with(['productSizeColor', 'productImages' => fn($query) => $query->select('Code', 'PicName', 'Def', 'CodeKala')])
                 ->where('CodeDoreMali', $this->financial_period)
                 ->whereHas('productSizeColor', function ($query) {
                     $query->havingRaw('SUM(Mande) > 0');
@@ -283,9 +212,6 @@ class ProductService
                     'Tedad',
                     'Foroosh',
                     'Sood',
-                    'CChangePic',
-                    'PicName',
-                    // 'Pic',
                     'ImageCode',
                     'created_at'
                 ])
@@ -294,12 +220,6 @@ class ProductService
 
             $results = $baseQuery->get();
 
-            // $this->processProductListImageCreation($results);
-
-            $results = $results->map(function ($item) {
-                unset($item->Pic);
-                return $item;
-            });
 
             return $results;
         });
@@ -547,7 +467,7 @@ class ProductService
         $cacheKey = 'kidsShopRedis_list_best_selling_' . md5(json_encode($queryParams) . '_page_' . $page);
 
         $results = $this->cacheQuery($cacheKey, $this->ttl, function () use ($request) {
-            $baseQuery = BestSellModel::with(['productSizeColor'])
+            $baseQuery = BestSellModel::with(['productSizeColor', 'productImages' => fn($query) => $query->select('Code', 'PicName', 'Def', 'CodeKala')])
                 ->where('CodeDoreMali', $this->financial_period)
                 ->whereHas('productSizeColor', function ($query) {
                     $query->havingRaw('SUM(Mande) > 0');
@@ -568,21 +488,10 @@ class ProductService
                 'Tedad',
                 'Foroosh',
                 'Sood',
-                'CChangePic',
-                'PicName',
-                // 'Pic',
-                'ImageCode',
                 'created_at'
             ]);
 
             $results = $baseQuery->paginate(24, ['*'], 'product_page');
-
-            // $this->processProductListImageCreation($results->items());
-
-            // $results->setCollection($results->getCollection()->map(function ($item) {
-            //     unset($item->Pic);
-            //     return $item;
-            // }));
 
             return $results;
         });
@@ -606,14 +515,6 @@ class ProductService
             $baseQuery = $this->setRequestFilter($request, $baseQuery);
 
             $results = $baseQuery->paginate(24, ['*'], 'product_page');
-
-            // $this->processProductListImageCreation($results->items());
-
-            $results->setCollection($results->getCollection()->map(function ($item) {
-                unset($item->Pic);
-                return $item;
-            }));
-
             return $results;
         });
 
@@ -638,13 +539,6 @@ class ProductService
             $baseQuery = $this->setRequestFilter($request, $baseQuery);
 
             $results = $baseQuery->paginate(24, ['*'], 'product_page');
-
-            $this->processProductListImageCreation($results->items());
-
-            $results->setCollection($results->getCollection()->map(function ($item) {
-                unset($item->Pic);
-                return $item;
-            }));
 
             return $results;
         })

@@ -21,7 +21,8 @@ class SubcategoryService
     protected $active_company;
     protected $companyService;
     protected $financial_period = null;
-    protected $ttl = 60 * 30;
+    // protected $ttl = 60 * 30;
+    protected $ttl = 0;
 
     use Cacheable;
 
@@ -35,64 +36,56 @@ class SubcategoryService
         $this->productImageService = $productImageService;
     }
 
-    protected function processCategoryImage($category)
+
+    protected function getProductsByCategory($gCode)
     {
-        if ($category->CChangePic == 1) {
-            if (!empty($category->PicName)) {
-                $this->categoryImageService->removeCategoryImage($category);
-            }
-
-            if (!empty($category->Pic)) {
-                $picName = Str::random(16);
-                $this->categoryImageService->processCategoryImage($category, $picName);
-                $updateData = ['CChangePic' => 0, 'PicName' => $picName];
-            } else {
-                $updateData = ['CChangePic' => 0, 'PicName' => null];
-            }
-
-            DB::table('KalaGroup')->where('Code', $category->Code)->update($updateData);
-        }
+        $cacheKey = "kidsShopRedis_products_by_category_{$gCode}";
+        return $this->cacheQuery($cacheKey, $this->ttl, function () use ($gCode) {
+            return ProductModel::with(['productSizeColor'])
+                ->where('CodeCompany', $this->active_company)
+                ->whereHas('productSizeColor', function ($query) {
+                    $query->havingRaw('SUM(Mande) > 0');
+                })
+                ->where('CShowInDevice', 1)
+                ->select([
+                    'GCode',
+                    'GName',
+                    'SCode',
+                    'SName',
+                    'Code',
+                    'CodeKala',
+                    'PicName',
+                ])->where('GCode', $gCode)
+                ->where('CShowInDevice', 1)
+                ->whereNotNull('PicName')
+                ->orderBy('Code', 'ASC')
+                ->limit(10)
+                ->get();
+        });
     }
 
-    protected function processSubCategoryImage($subcategory)
+    protected function setRandomProductImagesForCategory($category)
     {
-        if ($subcategory->CChangePic == 1) {
-            if (!empty($subcategory->PicName)) {
-                $this->subcategoryImageService->removeSubcategoryImage($subcategory);
-            }
+        $products = $this->getProductsByCategory($category->Code);
 
-            if (!empty($subcategory->Pic)) {
-                $picName = Str::random(16);
-                $this->subcategoryImageService->processSubcategoryImage($subcategory, $picName);
-                $updateData = ['CChangePic' => 0, 'PicName' => $picName];
-            } else {
-                $updateData = ['CChangePic' => 0, 'PicName' => null];
-            }
-
-            DB::table('KalaSubGroup')->where('Code', $subcategory->Code)->update($updateData);
-        }
-    }
-
-
-    protected function processSubcategoriesListImageCreation($subcategories)
-    {
-        foreach ($subcategories as $image) {
-            if ($image->CChangePic == 1) {
-                if (!empty($image->PicName)) {
-                    $this->subcategoryImageService->removeSubCategoryImage($image);
-                }
-
-                if (!empty($image->Pic)) {
-                    $picName = Str::random(16);
-                    $this->subcategoryImageService->processSubcategoryImage($image, $picName);
-                    $updateData = ['CChangePic' => 0, 'PicName' => $picName];
-                } else {
-                    $updateData = ['CChangePic' => 0, 'PicName' => null];
-                }
-
-                DB::table('KalaSubGroup')->where('Code', $image->Code)->update($updateData);
+        $randomProduct = null;
+        if ($products->isNotEmpty()) {
+            $validProducts = $products->whereNotNull('PicName');
+            if ($validProducts->isNotEmpty()) {
+                $randomProduct = $validProducts->random(1)->first();
             }
         }
+
+        if ($randomProduct && !empty($randomProduct->PicName)) {
+            $updateData = [
+                'CChangePic' => 0,
+                'PicName' => $randomProduct->PicName
+            ];
+        } else {
+            $updateData = ['CChangePic' => 0, 'PicName' => null];
+        }
+
+        DB::table('KalaGroup')->where('Code', $category->Code)->update($updateData);
     }
 
     protected function setRequestFilter($request, $baseQuery = null)
@@ -126,19 +119,16 @@ class SubcategoryService
         return $baseQuery;
     }
 
-    /**
-     * Base query for products.
-     */
+
     protected function baseProductQuery(): \Illuminate\Database\Eloquent\Builder
     {
-        return ProductModel::with(['productSizeColor'])
+        return ProductModel::with(['productSizeColor', 'productImages' => fn($query) => $query->select('Code', 'PicName', 'Def', 'CodeKala')])
             ->where('CodeCompany', $this->active_company)
             ->whereHas('productSizeColor', function ($query) {
                 $query->havingRaw('SUM(Mande) > 0');
             })
             ->where('CShowInDevice', 1)
             ->select([
-                'CChangePic',
                 'GCode',
                 'GName',
                 'SCode',
@@ -148,46 +138,8 @@ class SubcategoryService
                 'Name',
                 'Vahed',
                 'SPrice',
-                'PicName',
-                // 'Pic',
-                'ImageCode',
                 'created_at'
             ]);
-    }
-
-
-    protected function processProductListImageCreation($images): void
-    {
-        if (empty($images)) {
-            return;
-        }
-        $updates = [];
-        foreach ($images as $image) {
-            $gCode = is_array($image) ? ($image['GCode'] ?? null) : ($image->GCode ?? null);
-            $sCode = is_array($image) ? ($image['SCode'] ?? null) : ($image->SCode ?? null);
-            $cChangePic = is_array($image) ? ($image['CChangePic'] ?? null) : ($image->CChangePic ?? null);
-            $pic = is_array($image) ? ($image['Pic'] ?? null) : ($image->Pic ?? null);
-            $picName = is_array($image) ? ($image['PicName'] ?? null) : ($image->PicName ?? null);
-
-            $product = [
-                'GCode' => $gCode,
-                'SCode' => $sCode,
-            ];
-
-            if ($cChangePic == 1 && !empty($pic) && $picName == null) {
-                $picName = Str::random(16);
-                if ($this->productImageService->processProductImage($product, $image, $picName)) {
-                    $updates[] = ['Code' => $image->ImageCode, 'PicName' => $picName];
-                }
-            }
-        }
-        if (!empty($updates)) {
-            DB::transaction(function () use ($updates) {
-                foreach ($updates as $update) {
-                    DB::table('KalaImage')->where('Code', $update['Code'])->update(['PicName' => $update['PicName']]);
-                }
-            });
-        }
     }
 
 
@@ -417,7 +369,7 @@ class SubcategoryService
         return $products;
     }
 
-    protected function setRandomProductImages($subcategories)
+    protected function setRandomProductImagesForSubcategories($subcategories)
     {
         foreach ($subcategories as $subcategory) {
             $products = $this->getProductsBySubcategory($subcategory->Code);
@@ -434,7 +386,7 @@ class SubcategoryService
             if ($randomProduct && !empty($randomProduct->PicName)) {
                 $updateData = [
                     'CChangePic' => 0,
-                    'PicName' => $randomProduct->GCode . "/" . $randomProduct->SCode . "/" . $randomProduct->PicName
+                    'PicName' => $randomProduct->PicName
                 ];
             } else {
                 $updateData = ['CChangePic' => 0, 'PicName' => null];
@@ -455,13 +407,7 @@ class SubcategoryService
             $subcategories = SubCategoryModel::select('Code', 'Name', 'PicName')->where('CodeCompany', $this->active_company)
                 ->where('CodeGroup', $Code)->orderBy('Code', 'DESC')->paginate(12, ['*'], 'subcategory_page');
 
-            $this->setRandomProductImages($subcategories->items());
-            // $this->processSubcategoriesListImageCreation($subcategories->items());
-
-            // $subcategories->setCollection($subcategories->getCollection()->map(function ($item) {
-            //     unset($item->Pic);
-            //     return $item;
-            // }));
+            $this->setRandomProductImagesForSubcategories($subcategories->items());
 
             return $subcategories;
         });
@@ -471,8 +417,6 @@ class SubcategoryService
         }
 
         return $results;
-
-        // $subcategories->appends(['subcategory_page' => $subcategoryPage, 'product_page' => $productPage]);
     }
 
     public function fetchCategory($Code)
@@ -482,9 +426,7 @@ class SubcategoryService
 
             $result = SubCategoryModel::where('CodeCompany', $this->active_company)->where('CodeGroup', $Code)->first();
 
-            $this->processCategoryImage($result);
-
-            unset($result->Pic);
+            $this->setRandomProductImagesForCategory($result);
 
             return $result;
         });
@@ -499,8 +441,7 @@ class SubcategoryService
 
             $subcategory = SubCategoryModel::where('CodeCompany', $this->active_company)->where('Code', $Code)->first();
 
-            $this->processSubCategoryImage($subcategory);
-
+            $this->setRandomProductImagesForSubcategories([$subcategory]);
             unset($subcategory->Pic);
             unset($subcategory->CPic);
 
@@ -524,13 +465,6 @@ class SubcategoryService
             $baseQuery = $this->setRequestFilter($request, $baseQuery);
 
             $results = $baseQuery->paginate(24, ['*'], 'product_page');
-
-            // $this->processProductListImageCreation($results->items());
-
-            $results->setCollection($results->getCollection()->map(function ($item) {
-                unset($item->Pic);
-                return $item;
-            }));
 
             return $results;
         });
@@ -558,12 +492,6 @@ class SubcategoryService
 
             $results = $baseQuery->paginate(24, ['*'], 'product_page');
 
-            // $this->processProductListImageCreation($results->items());
-
-            $results->setCollection($results->getCollection()->map(function ($item) {
-                unset($item->Pic);
-                return $item;
-            }));
 
             return $results;
         });

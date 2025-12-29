@@ -12,7 +12,8 @@ use Illuminate\Support\Str;
 class CategoryService
 {
     protected $categoryImageService;
-    private $ttl = 60 * 30;
+    private $ttl = 0;
+    // private $ttl = 60 * 30;
     protected $categoryRepository;
     protected $active_company;
 
@@ -152,7 +153,7 @@ class CategoryService
             if ($randomProduct && !empty($randomProduct->PicName)) {
                 $updateData = [
                     'CChangePic' => 0,
-                    'PicName' => $randomProduct->GCode . "/" . $randomProduct->SCode . "/" . $randomProduct->PicName
+                    'PicName' => $randomProduct->PicName
                 ];
             } else {
                 $updateData = ['CChangePic' => 0, 'PicName' => null];
